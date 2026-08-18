@@ -221,7 +221,7 @@ npm run package-desktop
 
 ```text
 src-tauri\target\release\cursor-i18n-desktop-sample.exe
-..\dist\localization-workbench-v0.4.2.exe
-..\dist\localization-workbench-v0.4.2-windows.zip
+..\dist\localization-workbench-v0.4.3.exe
+..\dist\localization-workbench-v0.4.3-windows.zip
 ..\dist\SHA256SUMS.txt
 ```
