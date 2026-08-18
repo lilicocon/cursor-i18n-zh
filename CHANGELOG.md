@@ -4,6 +4,14 @@
 
 ## [未发布]
 
+## [0.4.5] - 2026-08-18
+
+### 改进
+
+- 浅色 Credit 界面补齐对比度: 「恢复原版」「一键恢复」改为深红/深绿字配浅底, 用量数字、已汉化状态、备份门禁和权限提示不再使用浅紫/薄荷绿。
+- 禁用主按钮改为不透明锌色底与深灰字, 避免白字叠在淡紫底上看不见。
+- 表格表头、空状态、侧栏版本、同意勾选、配置弹窗说明和警告 Toast 改为深灰/琥珀色, 浅色卡片边框改用可见的锌色描边。
+
 ## [0.4.4] - 2026-08-18
 
 ### 新增
@@ -255,6 +263,7 @@
 - 改进 NLS 合并, 繁体转换和 JavaScript tokenizer 替换引擎.
 - 增加 CI 词典检查, ZIP 冒烟测试和 GitHub Release 自动发布.
 
+[0.4.5]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/svipm/cursor-i18n-zh/compare/v0.4.1...v0.4.2
