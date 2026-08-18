@@ -4,9 +4,23 @@
 
 ## [未发布]
 
+## [0.4.4] - 2026-08-18
+
 ### 新增
 
 - 新增独立的 macOS Cursor 稳定版自动兼容工作流 `cursor-compat-macos.yml`. 每 6 小时读取 `darwin-universal` 官方下载接口, 在 `macos-14` 隔离目录挂载 DMG 并安装 `Cursor.app`, 校验代码签名后执行简繁补丁预检, 再构建 `.app.zip` / DMG 作为待验证产物; 失败开 Issue, 成功后写入 `compat/cursor-stable-macos.json` 并关闭对应 Issue.
+- 工作台更换应用图标: 白底圆角方标、锌色玻璃晶体和靛蓝立体「人」字折面, 对齐当前浅色 Credit 界面; 绘制脚本为 `scripts/render-app-icon.swift`, 并打包 icns/ico.
+- 桌面界面改为按本机 [LINUX DO Credit](https://github.com/linux-do/credit) 默认浅色 shadcn 面板实现: 白底、锌色侧栏、靛蓝主按钮、极光背景, 以及 Credit 仪表盘的卡片与圆角。
+- 软件中心改为识别本机已安装应用的图标: 从 Cursor.app / Claude.app 等安装目录读取 `.icns` / `.ico` / PNG, 仅在内存中转成 data URL 显示; Claude Desktop 未安装时使用 Wikimedia Commons `Claude_AI_symbol.svg`（CC0）合成的识别图标, Cursor 未安装时仍用浅色字母占位。
+- 概览 Node.js 运行环境和扩展管理 MCP 占位改为公开识别图标: Simple Icons `nodedotjs`（CC0）与 MCP 官方 `favicon.svg`（MIT）。
+- 关于页仓库、头像和开源项目列表改为 `lilicocon/cursor-i18n-zh`; 版本检查与安装包下载仍使用上游 `svipm/cursor-i18n-zh` 的 GitHub Releases.
+- 关于页热门项目置顶展示 [86jp_DfoGmTool](https://github.com/lilicocon/86jp_DfoGmTool)。
+
+### 改进
+
+- 运行日志支持一键复制到剪贴板, 以及导出带时间戳的 `.txt` 文件, 方便排障时把现场日志发出去.
+- GitHub 项目列表、版本检查和扩展市场在未登录限流时改用同一条文案, 区分 HTTP 403 限流、429 过频和网络错误, 避免看起来像两个无关故障.
+- 消除 macOS 开发编译中 `backup_root` 未使用参数、以及仅 Windows 使用的 Claude 辅助函数死代码警告.
 
 ## [0.4.3] - 2026-08-18
 
@@ -235,6 +249,7 @@
 - 改进 NLS 合并, 繁体转换和 JavaScript tokenizer 替换引擎.
 - 增加 CI 词典检查, ZIP 冒烟测试和 GitHub Release 自动发布.
 
+[0.4.4]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/svipm/cursor-i18n-zh/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/svipm/cursor-i18n-zh/compare/v0.4.0...v0.4.1

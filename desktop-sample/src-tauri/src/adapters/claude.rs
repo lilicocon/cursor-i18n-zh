@@ -1,5 +1,5 @@
 use super::{
-    hidden_command, is_elevated, local_app_data, ActionRequest, AppStatus, BackupRecord,
+    hidden_command, icons, is_elevated, local_app_data, ActionRequest, AppStatus, BackupRecord,
     LocaleOption, OperationResult, ProgressSink,
 };
 use serde::{Deserialize, Serialize};
@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "windows")]
 use std::process::Output;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -104,6 +105,7 @@ pub fn detect() -> AppStatus {
                 installed: true,
                 ready: true,
                 path: Some(install.resources.to_string_lossy().into_owned()),
+                icon_data_url: icons::data_url_for_claude(Some(&install.install_location)),
                 version: Some(install.version.clone()),
                 state: if localized {
                     "已汉化".to_string()
@@ -139,6 +141,7 @@ pub fn detect() -> AppStatus {
                 installed,
                 ready: false,
                 path: None,
+                icon_data_url: None,
                 version: None,
                 state: if installed {
                     "结构待适配".to_string()
@@ -904,6 +907,7 @@ fn windows_tool_path(path: &Path) -> String {
     path.as_os_str().to_string_lossy().replace('/', "\\")
 }
 
+#[cfg(target_os = "windows")]
 fn command_failure_detail(output: &Output) -> String {
     let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1255,6 +1259,7 @@ fn version_from_path(path: &Path) -> String {
         .to_string()
 }
 
+#[cfg(target_os = "windows")]
 fn version_parts(version: &str) -> Vec<u64> {
     version
         .split('.')

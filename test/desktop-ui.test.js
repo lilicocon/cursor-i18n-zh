@@ -18,6 +18,14 @@ const github = fs.readFileSync(
   path.join(root, 'desktop-sample', 'src-tauri', 'src', 'github.rs'),
   'utf8',
 );
+const adapterIcons = fs.readFileSync(
+  path.join(root, 'desktop-sample', 'src-tauri', 'src', 'adapters', 'icons.rs'),
+  'utf8',
+);
+const adapterMod = fs.readFileSync(
+  path.join(root, 'desktop-sample', 'src-tauri', 'src', 'adapters', 'mod.rs'),
+  'utf8',
+);
 const desktopMain = fs.readFileSync(
   path.join(root, 'desktop-sample', 'src-tauri', 'src', 'main.rs'),
   'utf8',
@@ -124,11 +132,16 @@ test('desktop UI exposes About, GitHub and optional update checks', () => {
   ]) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
-  assert.match(html, /github\.com\/svipm\/cursor-i18n-zh/);
-  assert.match(html, /github\.com\/svipm\.png\?size=160/);
+  assert.match(html, /github\.com\/lilicocon\/cursor-i18n-zh/);
+  assert.match(html, /github\.com\/lilicocon\.png\?size=160/);
+  assert.match(html, /86jp_DfoGmTool/);
   assert.match(html, /不自动下载、不静默安装、不强制更新/);
   assert.match(script, /invoke\("check_for_updates"\)/);
   assert.match(script, /invoke\("github_projects"\)/);
+  assert.match(script, /86jp_DfoGmTool/);
+  assert.match(release, /api\.github\.com\/repos\/svipm\/cursor-i18n-zh\/releases\/latest/);
+  assert.match(release, /PROJECT_REPOSITORY_URL: &str = "https:\/\/github\.com\/lilicocon\/cursor-i18n-zh"/);
+  assert.match(release, /PROJECT_RELEASES_URL: &str = "https:\/\/github\.com\/svipm\/cursor-i18n-zh\/releases"/);
   assert.match(script, /invoke\("open_github_url"/);
   assert.match(script, /invoke\("open_project_page"/);
   assert.match(script, /function renderGitHubProjects\(/);
@@ -144,16 +157,24 @@ test('desktop UI exposes About, GitHub and optional update checks', () => {
 });
 
 test('desktop GitHub project feed is public, sorted and URL restricted', () => {
-  assert.match(github, /api\.github\.com\/users\/svipm\/repos/);
+  assert.match(github, /api\.github\.com\/users\/lilicocon\/repos/);
+  assert.match(github, /PINNED_REPOSITORIES: &\[&str\] = &\["86jp_DfoGmTool"\]/);
   assert.match(github, /right\s*\.stars\s*\.cmp\(&left\.stars\)/);
   assert.match(github, /!repository\.fork/);
   assert.match(github, /!repository\.archived/);
   assert.match(github, /projects\.truncate\(MAX_PROJECTS\)/);
-  assert.match(github, /https:\/\/github\.com\/svipm\//);
+  assert.match(github, /https:\/\/github\.com\/lilicocon\//);
   assert.match(desktopMain, /async fn github_projects\(/);
   assert.match(desktopMain, /fn open_github_url\(/);
   assert.match(desktopMain, /github::is_safe_project_url\(&url\)/);
   assert.doesNotMatch(`${html}\n${script}\n${github}`, /github[_-]?token/i);
+  assert.match(network, /fn github_api_error\(/);
+  assert.match(network, /GitHub 公开接口已被限流/);
+  assert.match(github, /network::github_api_error\(error, "项目接口"\)/);
+  assert.match(release, /network::github_api_error\(other, "版本接口"\)/);
+  assert.match(market, /network::github_api_error\(other, "市场接口"\)/);
+  assert.match(script, /不影响汉化、备份等本地功能/);
+  assert.match(script, /function browserFallbackGitHubProjects\(/);
 });
 
 test('desktop UI manages Cursor and Claude Code MCP, Skills, prompts and market', () => {
@@ -357,8 +378,58 @@ test('desktop UI exposes Node.js 18 runtime detection', () => {
   }
   assert.match(html, /仅 Cursor 汉化功能需要/);
   assert.match(html, /Node\.js 18\+/);
+  assert.match(html, /node-logo\.png/);
+  assert.match(html, /mcp-logo\.png/);
+  assert.match(script, /function applyBrandMark\(/);
   assert.match(script, /invoke\("environment_status"\)/);
   assert.match(script, /function refreshEnvironmentAndApps\(/);
+});
+
+test('software center loads local app icons and keeps original light fallbacks', () => {
+  assert.match(html, /class="app-logo cursor-logo"/);
+  assert.match(html, /class="app-logo claude-logo has-local-icon"/);
+  assert.match(html, /id="appGrid"/);
+  assert.match(html, /id="cursorState"/);
+  assert.match(html, /id="claudeState"/);
+  assert.match(script, /function applyAppLogoElement\(/);
+  assert.match(script, /function syncAppLogos\(/);
+  assert.match(script, /app\.iconDataUrl/);
+  assert.match(script, /data:image\/png;base64,/);
+  assert.match(adapterMod, /pub icon_data_url: Option<String>/);
+  assert.match(adapterIcons, /fn data_url_for_cursor\(/);
+  assert.match(adapterIcons, /fn data_url_for_claude\(/);
+  assert.match(adapterIcons, /fn extract_png_from_icns\(/);
+  assert.match(adapterIcons, /fn extract_png_from_ico\(/);
+  assert.doesNotMatch(adapterIcons, /include_bytes!\s*\(/);
+  assert.doesNotMatch(adapterIcons, /include_str!\s*\(/);
+  assert.match(styles, /\.app-logo\.has-local-icon/);
+  assert.match(styles, /\.cursor-logo\s*\{[^}]*var\(--primary\)/);
+  assert.match(styles, /\.claude-logo\s*\{[^}]*#eef2ff/);
+  assert.doesNotMatch(styles, /\.cursor-logo\s*\{[^}]*#27272a/);
+  assert.doesNotMatch(styles, /\.claude-logo\s*\{[^}]*#d3845c/);
+  assert.match(script, /claude-logo\.png/);
+  const extensionTargetSlice = script.slice(
+    script.indexOf('const segment = $("#extensionTargetSegment")'),
+    script.indexOf('function renderExtensionHistory'),
+  );
+  assert.doesNotMatch(extensionTargetSlice, /iconDataUrl/);
+  const uiImages = fs.readdirSync(path.join(root, 'desktop-sample', 'ui'))
+    .filter((name) => /\.(png|ico|icns|svg|webp)$/i.test(name))
+    .sort();
+  assert.deepEqual(uiImages, ['app-icon.png', 'claude-logo.png', 'mcp-logo.png', 'node-logo.png']);
+  assert.match(
+    fs.readFileSync(path.join(root, 'desktop-sample', 'resources', 'brand-icons', 'SOURCE.md'), 'utf8'),
+    /nodedotjs\.svg/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(root, 'desktop-sample', 'resources', 'brand-icons', 'SOURCE.md'), 'utf8'),
+    /favicon\.svg/,
+  );
+  assert.ok(!fs.existsSync(path.join(root, 'desktop-sample', 'ui', 'Cursor.icns')));
+  assert.match(
+    fs.readFileSync(path.join(root, 'desktop-sample', 'resources', 'claude-icon', 'SOURCE.md'), 'utf8'),
+    /Claude_AI_symbol\.svg/,
+  );
 });
 
 test('desktop frontend never receives or renders Cursor credentials', () => {
@@ -431,4 +502,36 @@ test('Cursor macOS compatibility workflow bounds and cleans silent installer exe
   assert.match(cursorReleaseMacos, /darwin-universal/);
   assert.match(cursorReleaseMacos, /downloads\.cursor\.com/);
   assert.match(cursorReleaseMacos, /FORCE_COMPAT_CHECK/);
+});
+
+test('desktop UI can copy and download run logs', () => {
+  for (const id of ['copyLogsButton', 'downloadLogsButton', 'clearLogButton', 'logArea']) {
+    assert.match(html, new RegExp(`id=["']${id}["']`));
+  }
+  assert.match(html, /id="copyLogsButton"[^>]*class="[^"]*secondary-button[^"]*"[^>]*aria-label="复制运行日志"/);
+  assert.match(html, /id="downloadLogsButton"[^>]*class="[^"]*secondary-button[^"]*"[^>]*aria-label="下载运行日志"/);
+  assert.match(html, /id="copyLogsButton"[^>]*>复制</);
+  assert.match(html, /id="downloadLogsButton"[^>]*>下载</);
+  assert.match(script, /function collectLogText\(/);
+  assert.match(script, /querySelectorAll\("\.log-line"\)/);
+  assert.match(script, /async function copyRunLogs\(/);
+  assert.match(script, /async function downloadRunLogs\(/);
+  assert.match(script, /\$\("#copyLogsButton"\)\.addEventListener\("click", copyRunLogs\)/);
+  assert.match(script, /\$\("#downloadLogsButton"\)\.addEventListener\("click", downloadRunLogs\)/);
+  assert.match(script, /暂无日志可导出/);
+  assert.match(script, /navigator\.clipboard/);
+  assert.match(script, /writeText\(/);
+  assert.match(script, /execCommand\("copy"\)/);
+  assert.match(script, /i18n-workbench-logs-/);
+  assert.match(script, /padStart\(2, "0"\)/);
+  assert.match(script, /invoke\("save_run_logs"/);
+  assert.match(script, /createObjectURL\(/);
+  assert.match(script, /link\.download = filename/);
+  assert.match(script, /日志已复制到剪贴板/);
+  assert.match(script, /复制日志失败/);
+  assert.match(script, /导出日志失败/);
+  assert.match(desktopMain, /fn save_run_logs\(/);
+  assert.match(desktopMain, /save_run_logs,/);
+  assert.match(desktopMain, /Downloads/);
+  assert.match(styles, /\.log-actions/);
 });

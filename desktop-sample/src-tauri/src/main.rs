@@ -81,6 +81,49 @@ fn open_downloaded_update(path: String) -> Result<(), String> {
     )
 }
 
+fn is_safe_log_filename(filename: &str) -> bool {
+    let Some(stem) = filename
+        .strip_prefix("i18n-workbench-logs-")
+        .and_then(|value| value.strip_suffix(".txt"))
+    else {
+        return false;
+    };
+    let bytes = stem.as_bytes();
+    bytes.len() == 15
+        && bytes[8] == b'-'
+        && bytes[..8].iter().all(u8::is_ascii_digit)
+        && bytes[9..].iter().all(u8::is_ascii_digit)
+}
+
+fn user_downloads_dir() -> Result<std::path::PathBuf, String> {
+    let home = std::env::var_os("I18N_WORKBENCH_USER_HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .or_else(|| std::env::var_os("HOME"))
+        .map(std::path::PathBuf::from)
+        .ok_or_else(|| "无法确定当前用户目录".to_string())?;
+    Ok(home.join("Downloads"))
+}
+
+fn save_run_logs_to(
+    dir: &std::path::Path,
+    filename: &str,
+    contents: &str,
+) -> Result<std::path::PathBuf, String> {
+    if !is_safe_log_filename(filename) {
+        return Err("日志文件名无效".to_string());
+    }
+    std::fs::create_dir_all(dir).map_err(|error| format!("无法创建下载目录: {error}"))?;
+    let path = dir.join(filename);
+    std::fs::write(&path, contents).map_err(|error| format!("无法写入日志文件: {error}"))?;
+    Ok(path)
+}
+
+#[tauri::command]
+fn save_run_logs(contents: String, filename: String) -> Result<String, String> {
+    let path = save_run_logs_to(&user_downloads_dir()?, &filename, &contents)?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
 #[tauri::command]
 async fn github_projects() -> Result<Vec<github::GitHubProject>, String> {
     tauri::async_runtime::spawn_blocking(github::load_projects)
@@ -517,6 +560,7 @@ fn main() {
             check_for_updates,
             download_latest_update,
             open_downloaded_update,
+            save_run_logs,
             github_projects,
             extension_market,
             extension_install_market_item,
@@ -553,4 +597,37 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run localization workbench");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepts_timestamped_log_filenames_and_rejects_paths() {
+        assert!(is_safe_log_filename("i18n-workbench-logs-20260818-224300.txt"));
+        assert!(!is_safe_log_filename("i18n-workbench-logs-20260818-224300.log"));
+        assert!(!is_safe_log_filename("../i18n-workbench-logs-20260818-224300.txt"));
+        assert!(!is_safe_log_filename("i18n-workbench-logs-20260818-224300.txt/../secrets"));
+    }
+
+    #[test]
+    fn writes_run_logs_into_the_target_directory() {
+        let root = std::env::temp_dir().join(format!(
+            "i18n-workbench-logs-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let filename = "i18n-workbench-logs-20260818-224300.txt";
+        let path = save_run_logs_to(&root, filename, "INFO 已就绪\n").unwrap();
+        assert_eq!(path, root.join(filename));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "INFO 已就绪\n");
+        let error = save_run_logs_to(&root, "../escape.txt", "nope").unwrap_err();
+        assert!(error.contains("无效"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }

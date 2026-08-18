@@ -38,6 +38,17 @@ fn is_retryable(error: &Error) -> bool {
     )
 }
 
+pub fn github_api_error(error: Error, feature: &str) -> String {
+    match error {
+        Error::StatusCode(403) => {
+            "GitHub 公开接口已被限流 (未登录每小时约 60 次), 请稍后或更换网络再试".to_string()
+        }
+        Error::StatusCode(429) => "GitHub 请求过于频繁, 请稍后重试".to_string(),
+        Error::StatusCode(code) => format!("GitHub {feature}返回 HTTP {code}"),
+        other => format!("连接 GitHub {feature}失败: {other}"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,5 +79,20 @@ mod tests {
         .unwrap_err();
         assert!(matches!(error, Error::StatusCode(404)));
         assert_eq!(attempts, 1);
+    }
+
+    #[test]
+    fn describes_unauthenticated_rate_limit_separately_from_network_errors() {
+        let limited = github_api_error(Error::StatusCode(403), "项目接口");
+        let busy = github_api_error(Error::StatusCode(429), "版本接口");
+        let http = github_api_error(Error::StatusCode(500), "市场接口");
+        assert!(limited.contains("限流"));
+        assert!(limited.contains("60"));
+        assert!(busy.contains("过于频繁"));
+        assert_eq!(http, "GitHub 市场接口返回 HTTP 500");
+        assert_eq!(
+            github_api_error(Error::StatusCode(403), "版本接口"),
+            github_api_error(Error::StatusCode(403), "项目接口")
+        );
     }
 }

@@ -1,5 +1,5 @@
 use super::{
-    hidden_command, ActionRequest, AppStatus, BackupRecord, LocaleOption, NodeRuntimeStatus,
+    hidden_command, icons, ActionRequest, AppStatus, BackupRecord, LocaleOption, NodeRuntimeStatus,
     OperationResult, ProgressSink,
 };
 #[cfg(target_os = "macos")]
@@ -104,7 +104,10 @@ pub fn detect() -> AppStatus {
         description: "AI 代码编辑器中文适配器",
         installed,
         ready,
-        path: app_dir.map(|path| path.to_string_lossy().into_owned()),
+        path: app_dir
+            .as_ref()
+            .map(|path| path.to_string_lossy().into_owned()),
+        icon_data_url: icons::data_url_for_cursor(app_dir.as_deref()),
         version,
         state: if !compatibility.compatible && installed {
             "结构待适配".to_string()
@@ -597,12 +600,11 @@ fn backup_root(engine_root: &Path) -> PathBuf {
     if let Some(path) = std::env::var_os("CURSOR_I18N_BACKUP_ROOT").map(PathBuf::from) {
         return path;
     }
-    #[cfg(target_os = "macos")]
-    {
-        return local_app_data().join("backups/cursor");
+    if cfg!(target_os = "macos") {
+        local_app_data().join("backups/cursor")
+    } else {
+        engine_root.join("backup")
     }
-    #[cfg(not(target_os = "macos"))]
-    engine_root.join("backup")
 }
 
 pub fn node_runtime_status() -> NodeRuntimeStatus {

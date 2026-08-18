@@ -10,10 +10,10 @@
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-mark">译</div>
+            <img class="brand-mark" src="app-icon.png" width="40" height="40" alt="" />
           <div>
             <strong>汉化工作台</strong>
-            <span>Localization Hub</span>
+            <span>本地化工作台</span>
           </div>
         </div>
 
@@ -34,7 +34,7 @@
           </button>
           <button class="nav-item" data-section="extensions">
             <span class="nav-icon">⬡</span><span>扩展管理</span>
-            <span id="extensionNavBadge" class="nav-badge">MCP</span>
+            <span id="extensionNavBadge" class="nav-badge"><img class="nav-badge-mark" src="mcp-logo.png" alt="" />MCP</span>
           </button>
           <button class="nav-item" data-section="logs">
             <span class="nav-icon">◷</span><span>运行日志</span>
@@ -50,7 +50,7 @@
             <div><strong id="permissionTitle">正在检查权限</strong><small id="permissionText">请稍候...</small></div>
           </div>
           <div class="version-row">
-            <span>双应用工作台</span><span>v0.4.3</span>
+            <span>双应用工作台</span><span>v0.4.4</span>
           </div>
         </div>
       </aside>
@@ -71,13 +71,18 @@
         <section class="content">
           <div id="overview" class="hero-row scroll-anchor">
             <div>
-              <p class="eyebrow">LOCALIZATION WORKBENCH</p>
-              <h1>管理你的汉化体验</h1>
+              <p class="eyebrow">开源 · 本地优先</p>
+              <h1>管理你的汉化体验<br /><span class="hero-accent">备份、安装、随时恢复</span></h1>
               <p class="subtitle">检测本机软件, 预检补丁, 安全备份, 随时恢复原版.</p>
             </div>
             <button id="scanButton" class="secondary-button">
               <span id="scanIcon">↻</span>重新扫描
             </button>
+          </div>
+          <div class="hero-features">
+            <span><span class="feat-icon feat-zap" aria-hidden="true">⚡</span>版本隔离备份</span>
+            <span><span class="feat-icon feat-globe" aria-hidden="true">◎</span>本地处理</span>
+            <span><span class="feat-icon feat-shield" aria-hidden="true">◈</span>SHA256 校验</span>
           </div>
 
           <div class="summary-grid">
@@ -99,7 +104,7 @@
           </div>
 
           <article id="nodeRuntimeCard" class="runtime-card checking" aria-live="polite">
-            <div class="runtime-icon">JS</div>
+            <div class="runtime-icon has-brand-mark"><img class="brand-mark-image" src="node-logo.png" alt="" draggable="false" /></div>
             <div class="runtime-content">
               <div class="runtime-title-row">
                 <div><h3>Node.js 运行环境</h3><span>仅 Cursor 汉化功能需要</span></div>
@@ -134,7 +139,7 @@
               <div class="app-meta stacked-meta">
                 <span id="cursorVersion">版本: 检测中</span>
                 <span id="cursorInstallState">正在定位 resources/app...</span>
-                <span class="adapter-state">适配器 v0.4.3</span>
+                <span class="adapter-state">适配器 v0.4.4</span>
                 <span id="cursorCompatibility" class="compatibility-state">正在检测新版本兼容性</span>
               </div>
               <button class="primary-button configure-button" data-open-app="cursor">配置汉化 <span>→</span></button>
@@ -142,7 +147,7 @@
 
             <article class="app-card claude-card" data-app="claude">
               <div class="app-card-top">
-                <div class="app-logo claude-logo">AI</div>
+                <div class="app-logo claude-logo has-local-icon"><img class="app-logo-image" src="claude-logo.png" alt="" draggable="false" /></div>
                 <span class="pill neutral" id="claudeState">正在检测</span>
               </div>
               <h3>Claude Desktop</h3>
@@ -158,7 +163,7 @@
           </div>
 
           <article id="extensionOverviewCard" class="runtime-card extension-overview-card" aria-live="polite">
-            <div class="runtime-icon">MCP</div>
+            <div class="runtime-icon has-brand-mark"><img class="brand-mark-image" src="mcp-logo.png" alt="" draggable="false" /></div>
             <div class="runtime-content">
               <div class="runtime-title-row"><div><h3>扩展健康概览</h3><span>Cursor 与 Claude Code</span></div><span id="extensionOverviewState" class="pill neutral">等待扫描</span></div>
               <p id="extensionOverviewMessage">进入扩展管理后会显示异常 MCP、风险 Skill 和本地修改项目.</p>
@@ -257,7 +262,7 @@
 
               <article class="backup-card" data-backup-app="claude">
                 <div class="backup-card-header">
-                  <div class="app-logo claude-logo">AI</div>
+                  <div class="app-logo claude-logo has-local-icon"><img class="app-logo-image" src="claude-logo.png" alt="" draggable="false" /></div>
                   <div><h3>Claude Desktop</h3><span id="claudeBackupVersion">版本: 检测中</span></div>
                   <span id="claudeBackupState" class="pill neutral">正在校验</span>
                 </div>
@@ -299,7 +304,7 @@
           <section id="extensions" class="extension-section scroll-anchor" aria-busy="false">
             <div class="extension-hero">
               <div>
-                <span class="extension-kicker">MCP · SKILLS · PROMPTS · MARKET</span>
+                <span class="extension-kicker"><img class="extension-hero-mark" src="mcp-logo.png" alt="" />MCP · SKILLS · PROMPTS · MARKET</span>
                 <h2>Cursor 与 Claude Code 扩展管理</h2>
                 <p>统一维护 MCP, Agent Skill 和提示词规则, 浏览精选市场, 查看来源仓库并检查更新. 密钥始终在 Rust 后端脱敏处理.</p>
               </div>
@@ -352,7 +357,7 @@
                 <button id="clearExtensionSelectionButton" class="text-button">清除选择</button>
               </div>
               <div class="extension-tabs" role="tablist">
-                <button id="extensionMcpTab" class="active" data-extension-tab="mcp" role="tab" aria-selected="true" aria-controls="extensionMcpPanel">MCP 服务</button>
+                <button id="extensionMcpTab" class="active" data-extension-tab="mcp" role="tab" aria-selected="true" aria-controls="extensionMcpPanel"><img class="tab-brand-mark" src="mcp-logo.png" alt="" />MCP 服务</button>
                 <button id="extensionSkillTab" data-extension-tab="skill" role="tab" aria-selected="false" aria-controls="extensionSkillPanel" tabindex="-1">Agent Skills</button>
                 <button id="extensionPromptTab" data-extension-tab="prompt" role="tab" aria-selected="false" aria-controls="extensionPromptPanel" tabindex="-1">提示词</button>
                 <button id="extensionMarketTab" data-extension-tab="market" role="tab" aria-selected="false" aria-controls="extensionMarketPanel" tabindex="-1">扩展市场</button>
@@ -467,7 +472,11 @@
                 <h2>运行日志</h2>
                 <p id="activitySubtitle">等待操作</p>
               </div>
-              <button id="clearLogButton" class="icon-button" aria-label="清空日志">清空</button>
+              <div class="log-actions">
+                <button id="copyLogsButton" class="secondary-button" aria-label="复制运行日志">复制</button>
+                <button id="downloadLogsButton" class="secondary-button" aria-label="下载运行日志">下载</button>
+                <button id="clearLogButton" class="icon-button" aria-label="清空日志">清空</button>
+              </div>
             </div>
             <div id="logArea" class="log-area tall-log" aria-live="polite">
               <div class="log-line"><time>--:--:--</time><span class="log-info">INFO</span><p>汉化工作台已就绪.</p></div>
@@ -478,8 +487,8 @@
             <div class="about-hero">
               <div class="about-hero-glow" aria-hidden="true"></div>
               <div class="about-hero-content">
-                <span class="about-eyebrow">OPEN SOURCE · LOCAL FIRST</span>
-                <h2>让软件汉化更安全, 也更简单</h2>
+                <span class="about-eyebrow">开源 · 本地优先</span>
+                <h2>让软件汉化更安全<br /><span class="hero-accent">也更简单</span></h2>
                 <p>一个面向多应用的中文本地化工作台. 坚持版本隔离备份, 可验证修改和一键恢复.</p>
                 <div class="about-hero-tags" aria-label="项目特性">
                   <span>开源透明</span><span>本地处理</span><span>可恢复</span><span>持续适配</span>
@@ -487,7 +496,7 @@
               </div>
               <div class="about-hero-emblem" aria-hidden="true">
                 <strong>译</strong>
-                <span class="about-version-badge">v0.4.3</span>
+                <span class="about-version-badge">v0.4.4</span>
               </div>
             </div>
 
@@ -495,13 +504,13 @@
               <article class="about-project-card">
                 <div class="about-project-header">
                   <div class="about-avatar-shell">
-                    <div id="githubAvatarFallback" class="brand-mark about-brand-mark">译</div>
-                    <img id="githubAvatar" class="about-avatar" data-src="https://github.com/svipm.png?size=160" alt="svipm 的 GitHub 头像" referrerpolicy="no-referrer" />
+                    <img id="githubAvatarFallback" class="brand-mark about-brand-mark" src="app-icon.png" width="48" height="48" alt="" />
+                    <img id="githubAvatar" class="about-avatar" data-src="https://github.com/lilicocon.png?size=160" alt="lilicocon 的 GitHub 头像" referrerpolicy="no-referrer" />
                   </div>
-                  <div><h3>svipm / 汉化工作台</h3><p>Cursor 与 Claude Desktop 本地化管理工具</p></div>
+                  <div><h3>lilicocon / 汉化工作台</h3><p>Cursor 与 Claude Desktop 本地化管理工具</p></div>
                 </div>
                 <p class="about-description">提供版本备份, 完整性校验, 汉化安装, 原版恢复和 Cursor 用量监控. 所有本机修改流程均可审计.</p>
-                <code class="about-repository">github.com/svipm/cursor-i18n-zh</code>
+                <code class="about-repository">github.com/lilicocon/cursor-i18n-zh</code>
                 <div class="about-actions">
                   <button class="primary-button github-button" data-project-page="repository">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.24c-3.23.7-3.91-1.37-3.91-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.72 1.27 3.38.97.1-.75.41-1.27.74-1.56-2.58-.29-5.29-1.29-5.29-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.47.11-3.05 0 0 .97-.31 3.16 1.18A10.96 10.96 0 0 1 12 6.11c.98 0 1.96.13 2.88.39 2.2-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.72 5.39-5.31 5.68.42.36.79 1.07.79 2.16v3.25c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
@@ -514,11 +523,11 @@
               <article id="updateStatusCard" class="about-update-card checking">
                 <div class="about-update-heading">
                   <div class="update-icon">↻</div>
-                  <div><h3>版本更新</h3><p>启动时后台检查, 永不强制更新.</p></div>
+                  <div><h3>版本更新</h3><p>启动时后台检查上游正式发行版, 永不强制更新.</p></div>
                   <span id="updateState" class="pill neutral">正在检查</span>
                 </div>
                 <div class="update-version-facts">
-                  <span>当前版本<strong id="updateCurrentVersion">v0.4.3</strong></span>
+                  <span>当前版本<strong id="updateCurrentVersion">v0.4.4</strong></span>
                   <span>最新版本<strong id="updateLatestVersion">--</strong></span>
                 </div>
                 <p id="updateMessage" class="update-message">正在连接 GitHub 检查正式发行版...</p>
@@ -537,9 +546,9 @@
             <section class="featured-projects" aria-labelledby="featuredProjectsTitle">
               <div class="featured-projects-heading">
                 <div>
-                  <span class="section-kicker">SVIPM · GITHUB</span>
+                  <span class="section-kicker">LILICOCON · GITHUB</span>
                   <h3 id="featuredProjectsTitle">热门开源项目</h3>
-                  <p>按公开 Star 数动态排序. 喜欢某个项目, 欢迎前往 GitHub 点亮 Star.</p>
+                  <p>置顶 86jp_DfoGmTool, 其余按公开 Star 数排序. 喜欢某个项目, 欢迎前往 GitHub 点亮 Star.</p>
                 </div>
                 <button id="refreshProjectsButton" class="secondary-button project-refresh-button">
                   <span aria-hidden="true">↻</span>刷新项目
@@ -566,7 +575,7 @@
                   <li>汉化会修改本机应用资源, 安装前必须完成对应版本备份和 SHA256 校验.</li>
                   <li>Cursor 用量监控只向 Cursor 自有接口查询数据, 登录令牌不返回前端、不写日志、不落盘.</li>
                   <li>MCP 密钥、环境变量和请求头只在 Rust 后端处理, 前端仅显示脱敏字段, 修改前自动备份配置.</li>
-                  <li>更新检查只读取 GitHub 正式发行版信息, 不自动下载、不静默安装、不强制更新.</li>
+                  <li>更新检查只读取上游仓库 GitHub 正式发行版信息, 不自动下载、不静默安装、不强制更新.</li>
                   <li>执行安装或恢复前请保存工作, 工作台会自动退出目标应用并确认进程完全结束.</li>
                 </ul>
                 <div class="about-actions">
@@ -699,7 +708,7 @@
         <header class="first-run-header">
           <div class="first-run-mark">译</div>
           <div>
-            <p>LOCALIZATION WORKBENCH</p>
+            <p>本地化工作台</p>
             <h2 id="firstRunTitle">首次使用须知</h2>
           </div>
           <button id="firstRunCloseButton" class="modal-close" aria-label="关闭声明" hidden>×</button>
@@ -724,7 +733,7 @@
                 <li>软件检测、备份、校验和恢复均在本机执行. 备份只保存在界面显示的本地目录.</li>
                 <li>Cursor 用量监控只读本机登录状态. 令牌仅在 Rust 后端内存中使用, 只发送给 Cursor 自有接口, 不返回前端、不写日志、不落盘.</li>
                 <li>扩展管理只读取用户选择范围内的 MCP 与 Skill. MCP 密钥和请求头不返回前端, 配置修改前会创建本地备份.</li>
-                <li>版本检查只向 GitHub 请求公开发行版信息, 不携带 Cursor 或 Claude 账号信息, 不自动下载、不静默安装、不强制更新.</li>
+                <li>版本检查只向上游仓库 GitHub 请求公开发行版信息, 不携带 Cursor 或 Claude 账号信息, 不自动下载、不静默安装、不强制更新.</li>
                 <li>GitHub 头像仅在打开关于页时按需加载. 不同意本说明可以直接退出, 工作台不会继续初始化.</li>
               </ul>
             </article>

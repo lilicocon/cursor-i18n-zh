@@ -6,7 +6,7 @@ TAURI="$ROOT/desktop-sample/src-tauri"
 DIST="$ROOT/dist"
 VERSION="$(node -p "require('$ROOT/package.json').version")"
 TARGET="universal-apple-darwin"
-ICON_SOURCE="$TAURI/icons/icon.ico"
+ICON_SOURCE="$TAURI/icons/icon.png"
 ICONSET="$TAURI/icons/icon.iconset"
 ICNS="$TAURI/icons/icon.icns"
 

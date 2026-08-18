@@ -160,6 +160,93 @@ function addLog(level, message) {
   $("#logArea").scrollTop = $("#logArea").scrollHeight;
 }
 
+function collectLogText() {
+  return [...$("#logArea").querySelectorAll(".log-line")]
+    .map((line) => {
+      const time = line.querySelector("time")?.textContent.trim() ?? "";
+      const level = line.querySelector("span")?.textContent.trim() ?? "";
+      const message = line.querySelector("p")?.textContent.trim() ?? "";
+      return [time, level, message].filter(Boolean).join(" ");
+    })
+    .join("\n")
+    .trim();
+}
+
+function logExportFilename(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `i18n-workbench-logs-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}.txt`;
+}
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    /* fall through to execCommand */
+  }
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.left = "-9999px";
+  document.body.appendChild(area);
+  area.select();
+  const copied = document.execCommand("copy");
+  area.remove();
+  if (!copied) throw new Error("clipboard unavailable");
+}
+
+async function copyRunLogs() {
+  const text = collectLogText();
+  if (!text) {
+    showToast("暂无日志可导出", "warning");
+    return;
+  }
+  try {
+    await copyText(text);
+    showToast("日志已复制到剪贴板.");
+  } catch (error) {
+    addLog("WARN", `复制日志失败: ${normalizeError(error)}`);
+    showToast("复制日志失败.", "warning");
+  }
+}
+
+function downloadLogsInBrowser(text, filename) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function downloadRunLogs() {
+  const text = collectLogText();
+  if (!text) {
+    showToast("暂无日志可导出", "warning");
+    return;
+  }
+  const filename = logExportFilename();
+  try {
+    if (invoke) {
+      const path = await invoke("save_run_logs", { contents: text, filename });
+      addLog("DONE", `运行日志已导出: ${path}`);
+      showToast("日志已保存到下载文件夹.");
+      return;
+    }
+    downloadLogsInBrowser(text, filename);
+    showToast("日志已开始下载.");
+  } catch (error) {
+    addLog("WARN", `导出日志失败: ${normalizeError(error)}`);
+    showToast("导出日志失败.", "warning");
+  }
+}
+
 let toastTimer;
 function showToast(message, tone = "success") {
   const toast = $("#toast");
@@ -175,7 +262,7 @@ function browserFallbackApps() {
   return [
     {
       id: "cursor", name: "Cursor", installed: true, ready: true, path: "浏览器预览模式",
-      version: "preview", state: "适配器可用", stateTone: "success", adapterVersion: "0.4.3",
+      version: "preview", state: "适配器可用", stateTone: "success", adapterVersion: "0.4.4",
       backupAvailable: true, backupPath: "浏览器预览模式\\backup\\preview", backupFiles: 7,
       backupMessage: "浏览器预览样例: 7 个文件已通过完整性校验", localized: false, reason: null,
       autoCompatible: true, compatibilityMessage: "已按资源结构自动适配未来 Cursor 版本, 安装前仍会执行完整语法预检",
@@ -233,23 +320,34 @@ function browserFallbackUsage() {
 
 function browserFallbackUpdateStatus() {
   return {
-    currentVersion: "0.4.3",
-    latestVersion: "0.4.3",
+    currentVersion: "0.4.4",
+    latestVersion: "0.4.4",
     updateAvailable: false,
     currentAhead: false,
     releaseUrl: "https://github.com/svipm/cursor-i18n-zh/releases",
     publishedAt: new Date().toISOString(),
-    message: "浏览器预览样例: 当前 v0.4.3 已是最新版本",
+    message: "浏览器预览样例: 当前 v0.4.4 已是最新版本",
   };
 }
 
 function browserFallbackGitHubProjects() {
   return [
     {
+      name: "86jp_DfoGmTool",
+      fullName: "lilicocon/86jp_DfoGmTool",
+      description: "DFO GM 工具.",
+      htmlUrl: "https://github.com/lilicocon/86jp_DfoGmTool",
+      language: "JavaScript",
+      stars: 0,
+      forks: 0,
+      topics: ["dfo", "gm-tool"],
+      updatedAt: new Date().toISOString(),
+    },
+    {
       name: "cursor-i18n-zh",
-      fullName: "svipm/cursor-i18n-zh",
+      fullName: "lilicocon/cursor-i18n-zh",
       description: "为 Cursor 和 Claude Desktop 提供安全备份, 汉化安装, 原版恢复和用量监控的桌面工作台.",
-      htmlUrl: "https://github.com/svipm/cursor-i18n-zh",
+      htmlUrl: "https://github.com/lilicocon/cursor-i18n-zh",
       language: "JavaScript",
       stars: 13,
       forks: 2,
@@ -295,7 +393,7 @@ function browserFallbackExtensionInventory(query) {
       ...(cursor && query.scope === "user" ? [{ id: "builtin-browser", name: "builtin-browser", description: "Cursor 内置 Skill 示例, 仅支持查看.", enabled: true, builtIn: true, source: "Cursor 内置", path: "preview" }] : []),
     ],
     prompts: cursor && query.scope === "user" ? [] : [
-      { id: "engineering-quality", name: "engineering-quality", description: "工程质量和验证闭环规则.", enabled: true, source: query.scope === "project" ? "项目级" : "用户级", path: "preview", repository: "https://github.com/svipm/cursor-i18n-zh", revision: "preview", localModified: false },
+      { id: "engineering-quality", name: "engineering-quality", description: "工程质量和验证闭环规则.", enabled: true, source: query.scope === "project" ? "项目级" : "用户级", path: "preview", repository: "https://github.com/lilicocon/cursor-i18n-zh", revision: "preview", localModified: false },
     ],
   };
 }
@@ -305,8 +403,8 @@ function browserFallbackMarket(query) {
     { id: "playwright-mcp", kind: "mcp", name: "playwright", title: "Playwright MCP", description: "让 Agent 操作浏览器.", repository: "https://github.com/microsoft/playwright-mcp", trust: "official", license: "Apache-2.0", installed: false, updateAvailable: false, localModified: false, status: "未安装" },
     { id: "anthropic-frontend-design", kind: "skill", name: "frontend-design", title: "Frontend Design", description: "Anthropic 官方前端设计 Skill.", repository: "https://github.com/anthropics/skills", trust: "official", license: "Apache-2.0", installed: false, updateAvailable: false, localModified: false, status: "未安装" },
     ...(query.target === "cursor"
-      ? [{ id: "cursor-code-review-prompt", kind: "prompt", name: "code-review", title: "Cursor 代码审查规则", description: "根因优先的代码审查提示词.", repository: "https://github.com/svipm/cursor-i18n-zh", trust: "official", license: "MIT", installed: false, updateAvailable: false, localModified: false, status: "未安装" }]
-      : [{ id: "claude-code-engineering-prompt", kind: "prompt", name: "engineering-quality", title: "Claude Code 工程质量规则", description: "工程质量和验证闭环提示词.", repository: "https://github.com/svipm/cursor-i18n-zh", trust: "official", license: "MIT", installed: true, updateAvailable: false, localModified: false, status: "已安装" }]),
+      ? [{ id: "cursor-code-review-prompt", kind: "prompt", name: "code-review", title: "Cursor 代码审查规则", description: "根因优先的代码审查提示词.", repository: "https://github.com/lilicocon/cursor-i18n-zh", trust: "official", license: "MIT", installed: false, updateAvailable: false, localModified: false, status: "未安装" }]
+      : [{ id: "claude-code-engineering-prompt", kind: "prompt", name: "engineering-quality", title: "Claude Code 工程质量规则", description: "工程质量和验证闭环提示词.", repository: "https://github.com/lilicocon/cursor-i18n-zh", trust: "official", license: "MIT", installed: true, updateAvailable: false, localModified: false, status: "已安装" }]),
   ];
 }
 
@@ -394,6 +492,53 @@ async function refreshEnvironmentAndApps() {
   await scanApps();
 }
 
+function appLogoMark(appId) {
+  return appId === "claude" ? "AI" : "C";
+}
+
+function applyBrandMark(el, src) {
+  if (!el || !src) return;
+  el.classList.add("has-brand-mark");
+  let img = el.querySelector("img.brand-mark-image");
+  if (!img) {
+    img = document.createElement("img");
+    img.className = "brand-mark-image";
+    img.alt = "";
+    img.draggable = false;
+    el.replaceChildren(img);
+  }
+  if (img.getAttribute("src") !== src) img.setAttribute("src", src);
+}
+
+function applyAppLogoElement(el, appId, dataUrl) {
+  if (!el) return;
+  const mark = appLogoMark(appId);
+  const bundled = appId === "claude" ? "claude-logo.png" : "";
+  const valid = typeof dataUrl === "string"
+    && dataUrl.startsWith("data:image/png;base64,")
+    && dataUrl.length < 400000;
+  const source = valid ? dataUrl : bundled;
+  el.classList.toggle("has-local-icon", Boolean(source));
+  if (!source) {
+    el.replaceChildren();
+    el.textContent = mark;
+    return;
+  }
+  let img = el.querySelector("img.app-logo-image");
+  if (!img) {
+    img = document.createElement("img");
+    img.className = "app-logo-image";
+    img.alt = "";
+    img.draggable = false;
+    el.replaceChildren(img);
+  }
+  if (img.getAttribute("src") !== source) img.setAttribute("src", source);
+}
+
+function syncAppLogos(app) {
+  $$(`.app-logo.${app.id}-logo`).forEach((el) => applyAppLogoElement(el, app.id, app.iconDataUrl));
+}
+
 function updateAppCard(app) {
   const card = $(`.app-card[data-app="${app.id}"]`);
   if (!card) return;
@@ -402,6 +547,7 @@ function updateAppCard(app) {
   const version = $(`#${app.id}Version`);
   const compatibility = $(`#${app.id}Compatibility`);
   const button = card.querySelector(".configure-button");
+  syncAppLogos(app);
 
   pill.textContent = app.state;
   pill.className = `pill ${app.stateTone || (app.ready ? "success" : "warning")}`;
@@ -513,8 +659,12 @@ function renderBackupHistory() {
       <div class="backup-history-files"><strong></strong><small>完整文件</small></div>
       <div class="backup-history-state"><span class="history-state-pill"></span><small></small></div>
       <button class="history-restore-button" type="button">一键恢复</button>`;
-    row.querySelector(".history-app-logo").textContent = record.appId === "claude" ? "AI" : "C";
     row.querySelector(".history-app-logo").classList.add(record.appId === "claude" ? "claude" : "cursor");
+    applyAppLogoElement(
+      row.querySelector(".history-app-logo"),
+      record.appId,
+      state.apps.find((item) => item.id === record.appId)?.iconDataUrl,
+    );
     row.querySelector(".backup-history-app strong").textContent = record.appName;
     row.querySelector(".backup-history-app small").textContent = `版本 ${record.version}`;
     row.querySelector(".backup-history-time strong").textContent = formatBackupTime(record);
@@ -667,10 +817,10 @@ async function loadUpdateStatus({ notify = false } = {}) {
     $("#updateState").textContent = "检查失败";
     $("#updateState").className = "pill warning";
     $("#updateLatestVersion").textContent = "--";
-    $("#updateMessage").textContent = `${message}. 不影响当前版本使用, 可以稍后重新检查.`;
+    $("#updateMessage").textContent = `${message}. 不影响当前版本使用, 可稍后或更换网络后重新检查.`;
     $("#viewUpdateButton").classList.add("hidden");
     addLog("WARN", `版本检查失败: ${message}`);
-    if (notify) showToast("版本检查失败, 不影响当前使用.", "warning");
+    if (notify) showToast("版本检查失败, 不影响当前使用. 可稍后或更换网络再试.", "warning");
   } finally {
     state.updateLoading = false;
     button.disabled = false;
@@ -689,7 +839,7 @@ async function downloadLatestUpdate() {
   try {
     const result = invoke
       ? await invoke("download_latest_update")
-      : { version: "0.4.3", path: "D:\\Downloads\\localization-workbench.zip", sha256: "demo", cached: false };
+      : { version: "0.4.4", path: "D:\\Downloads\\localization-workbench.zip", sha256: "demo", cached: false };
     addLog("DONE", `更新包 v${result.version} ${result.cached ? "已从本地缓存复用" : "已流式下载"}并通过 SHA256 校验: ${result.path}`);
     setUpdateDownloadProgress(100, result.cached ? "本地缓存已通过 SHA256 校验" : "更新包已下载并通过 SHA256 校验", "complete");
     showToast(`更新包 v${result.version} ${result.cached ? "缓存已校验" : "下载已完成"}.`, "success");
@@ -731,7 +881,7 @@ async function openProjectPage(page) {
     if (invoke) await invoke("open_project_page", { page });
     else window.open(
       page === "repository"
-        ? "https://github.com/svipm/cursor-i18n-zh"
+        ? "https://github.com/lilicocon/cursor-i18n-zh"
         : "https://github.com/svipm/cursor-i18n-zh/releases",
       "_blank",
       "noopener,noreferrer",
@@ -810,7 +960,7 @@ function renderGitHubProjects(projects) {
     const identity = document.createElement("div");
     identity.className = "project-identity";
     const owner = document.createElement("span");
-    owner.textContent = "svipm / public";
+    owner.textContent = "lilicocon / public";
     const name = document.createElement("h4");
     name.textContent = project.name || "未命名项目";
     identity.append(owner, name);
@@ -895,7 +1045,7 @@ async function loadGitHubProjects({ force = false } = {}) {
       setGitHubProjectsState("failed", "刷新失败, 已保留上次结果", `${message}. 可以稍后重试.`);
     } else {
       $("#githubProjectsGrid").replaceChildren();
-      setGitHubProjectsState("failed", "暂时无法读取项目", `${message}. 不影响工作台其他功能.`);
+      setGitHubProjectsState("failed", "暂时无法读取项目", `${message}. 不影响汉化、备份等本地功能.`);
     }
     addLog("WARN", `GitHub 项目读取失败: ${message}`);
   } finally {
@@ -1519,7 +1669,7 @@ function renderExtensionMcp(servers) {
     header.className = "extension-item-header";
     const icon = document.createElement("div");
     icon.className = `extension-item-icon ${server.transport === "stdio" ? "" : "http"}`;
-    icon.textContent = server.transport === "stdio" ? "IO" : "WEB";
+    applyBrandMark(icon, "mcp-logo.png");
     const title = document.createElement("div");
     title.className = "extension-item-title";
     const heading = document.createElement("h4");
@@ -1821,7 +1971,8 @@ function renderExtensionMarket(items) {
     header.className = "extension-item-header no-select";
     const icon = document.createElement("div");
     icon.className = `extension-item-icon ${entry.kind === "skill" ? "skill" : entry.kind === "prompt" ? "prompt" : ""}`;
-    icon.textContent = entry.kind === "mcp" ? "M" : entry.kind === "skill" ? "SK" : "PR";
+    if (entry.kind === "mcp") applyBrandMark(icon, "mcp-logo.png");
+    else icon.textContent = entry.kind === "skill" ? "SK" : "PR";
     const title = document.createElement("div");
     title.className = "extension-item-title";
     const heading = document.createElement("h4");
@@ -2520,7 +2671,7 @@ function openModal(appId) {
   $("#modalVersion").textContent = `版本: ${app.version || "未知"}`;
   $("#modalState").textContent = app.state;
   $("#modalLogo").className = `app-logo ${appId === "claude" ? "claude-logo" : "cursor-logo"}`;
-  $("#modalLogo").textContent = appId === "claude" ? "AI" : "C";
+  applyAppLogoElement($("#modalLogo"), appId, app.iconDataUrl);
   $("#safetyText").innerHTML = appId === "claude"
     ? "<strong>自动兼容资源模式</strong><br>自动定位最新版本并校验 3 个 en-US.json, 不修改 app.asar 或客户端配置. macOS 修改后会执行本机 ad-hoc 重签名."
     : "<strong>自动兼容引擎模式</strong><br>按资源结构发现新入口包, 安装前执行严格语法预检, 版本备份和事务化恢复.";
@@ -2977,6 +3128,8 @@ $("#restartAdminButton").addEventListener("click", async () => {
     showToast("管理员重启失败.", "warning");
   }
 });
+$("#copyLogsButton").addEventListener("click", copyRunLogs);
+$("#downloadLogsButton").addEventListener("click", downloadRunLogs);
 $("#clearLogButton").addEventListener("click", () => {
   $("#logArea").replaceChildren();
   addLog("INFO", "日志已清空.");

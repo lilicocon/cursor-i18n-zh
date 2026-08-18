@@ -1,5 +1,6 @@
 pub mod claude;
 pub mod cursor;
+mod icons;
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -25,6 +26,7 @@ pub struct AppStatus {
     pub installed: bool,
     pub ready: bool,
     pub path: Option<String>,
+    pub icon_data_url: Option<String>,
     pub version: Option<String>,
     pub state: String,
     pub state_tone: &'static str,

@@ -659,9 +659,7 @@ fn fetch_bytes(agent: &ureq::Agent, url: &str) -> Result<Vec<u8>, String> {
 fn github_error(error: Error) -> String {
     match error {
         Error::StatusCode(404) => "GitHub 市场资源不存在".to_string(),
-        Error::StatusCode(403 | 429) => "GitHub 市场请求暂时受限, 请稍后重试".to_string(),
-        Error::StatusCode(code) => format!("GitHub 市场接口返回 HTTP {code}"),
-        other => format!("连接 GitHub 扩展市场失败: {other}"),
+        other => network::github_api_error(other, "市场接口"),
     }
 }
 

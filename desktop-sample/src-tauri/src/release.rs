@@ -13,7 +13,7 @@ use crate::network;
 
 const LATEST_RELEASE_API: &str =
     "https://api.github.com/repos/svipm/cursor-i18n-zh/releases/latest";
-pub const PROJECT_REPOSITORY_URL: &str = "https://github.com/svipm/cursor-i18n-zh";
+pub const PROJECT_REPOSITORY_URL: &str = "https://github.com/lilicocon/cursor-i18n-zh";
 pub const PROJECT_RELEASES_URL: &str = "https://github.com/svipm/cursor-i18n-zh/releases";
 
 #[derive(Serialize)]
@@ -383,9 +383,7 @@ fn digest_hex(data: impl AsRef<[u8]>) -> String {
 fn github_error(error: Error) -> String {
     match error {
         Error::StatusCode(404) => "GitHub 尚未找到正式发行版".to_string(),
-        Error::StatusCode(403 | 429) => "GitHub 版本检查暂时受限, 请稍后重试".to_string(),
-        Error::StatusCode(code) => format!("GitHub 版本接口返回 HTTP {code}"),
-        other => format!("连接 GitHub 检查版本失败: {other}"),
+        other => network::github_api_error(other, "版本接口"),
     }
 }
 
