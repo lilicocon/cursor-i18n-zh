@@ -74,7 +74,7 @@
     "name": "code-review",
     "title": "Cursor 代码审查规则",
     "description": "要求 Cursor 优先定位根因, 保留用户改动并完成针对性验证.",
-    "repository": "https://github.com/svipm/cursor-i18n-zh",
+    "repository": "https://github.com/lilicocon/cursor-i18n-zh",
     "trust": "official",
     "license": "MIT",
     "content": "始终先确认修改目标和边界. 审查代码时优先报告可复现的正确性, 安全性和数据损坏问题. 修改时保留无关用户改动, 完成与改动直接相关的测试, 并明确说明未验证部分."
@@ -86,7 +86,7 @@
     "name": "engineering-quality",
     "title": "Claude Code 工程质量规则",
     "description": "为 Claude Code 增加根因分析, 最小边界和验证闭环约束.",
-    "repository": "https://github.com/svipm/cursor-i18n-zh",
+    "repository": "https://github.com/lilicocon/cursor-i18n-zh",
     "trust": "official",
     "license": "MIT",
     "content": "处理工程任务时先检查仓库现状和约束. 直接修复根因, 不使用未经要求的降级方案. 不覆盖无关改动. 修改后运行直接相关的测试, 格式检查和差异检查, 只有证据充分时才声明完成."

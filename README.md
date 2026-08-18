@@ -4,10 +4,10 @@
   <p>版本识别 · 强制备份 · 一键汉化 · 原版恢复 · 用量监控 · MCP/Skill/提示词管理 · 扩展市场 · Windows/macOS</p>
 
   <p>
-    <a href="https://github.com/svipm/cursor-i18n-zh/actions/workflows/build.yml"><img alt="构建状态" src="https://github.com/svipm/cursor-i18n-zh/actions/workflows/build.yml/badge.svg"></a>
-    <a href="https://github.com/svipm/cursor-i18n-zh/actions/workflows/cursor-compat.yml"><img alt="Cursor 兼容性" src="https://github.com/svipm/cursor-i18n-zh/actions/workflows/cursor-compat.yml/badge.svg"></a>
-    <a href="https://github.com/svipm/cursor-i18n-zh/releases"><img alt="最新版本" src="https://img.shields.io/github/v/release/svipm/cursor-i18n-zh?display_name=tag"></a>
-    <a href="LICENSE"><img alt="许可证" src="https://img.shields.io/github/license/svipm/cursor-i18n-zh"></a>
+    <a href="https://github.com/lilicocon/cursor-i18n-zh/actions/workflows/build.yml"><img alt="构建状态" src="https://github.com/lilicocon/cursor-i18n-zh/actions/workflows/build.yml/badge.svg"></a>
+    <a href="https://github.com/lilicocon/cursor-i18n-zh/actions/workflows/cursor-compat.yml"><img alt="Cursor 兼容性" src="https://github.com/lilicocon/cursor-i18n-zh/actions/workflows/cursor-compat.yml/badge.svg"></a>
+    <a href="https://github.com/lilicocon/cursor-i18n-zh/releases"><img alt="最新版本" src="https://img.shields.io/github/v/release/lilicocon/cursor-i18n-zh?display_name=tag"></a>
+    <a href="LICENSE"><img alt="许可证" src="https://img.shields.io/github/license/lilicocon/cursor-i18n-zh"></a>
   </p>
 
   <p>
@@ -143,7 +143,7 @@ app/resources/ion-dist/i18n/dynamic/en-US.json
 
 ## 下载和使用
 
-从 [最新发行版](https://github.com/svipm/cursor-i18n-zh/releases/latest) 下载推荐的完整便携包:
+从 [最新发行版](https://github.com/lilicocon/cursor-i18n-zh/releases/latest) 下载推荐的完整便携包:
 
 ```text
 localization-workbench-v0.4.4-windows.zip

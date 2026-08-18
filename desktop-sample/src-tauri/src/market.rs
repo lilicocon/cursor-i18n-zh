@@ -282,7 +282,7 @@ fn load_catalog() -> Result<Vec<MarketItem>, String> {
                 .unwrap_or_default();
             if !matches!(
                 owner,
-                "microsoft" | "anthropics" | "modelcontextprotocol" | "svipm"
+                "microsoft" | "anthropics" | "modelcontextprotocol" | "lilicocon"
             ) {
                 return Err(format!("市场项目不能标记为官方来源: {}", item.id));
             }

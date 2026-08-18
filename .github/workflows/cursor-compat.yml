@@ -201,7 +201,7 @@ jobs:
 
       - name: Upload compatibility reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cursor-${{ needs.detect.outputs.version }}-compatibility-reports
           path: |
@@ -211,7 +211,7 @@ jobs:
           retention-days: 30
 
       - name: Upload validated Windows build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: localization-workbench-cursor-${{ needs.detect.outputs.version }}
           path: |

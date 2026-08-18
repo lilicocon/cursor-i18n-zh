@@ -13,7 +13,7 @@
 - 桌面界面改为按本机 [LINUX DO Credit](https://github.com/linux-do/credit) 默认浅色 shadcn 面板实现: 白底、锌色侧栏、靛蓝主按钮、极光背景, 以及 Credit 仪表盘的卡片与圆角。
 - 软件中心改为识别本机已安装应用的图标: 从 Cursor.app / Claude.app 等安装目录读取 `.icns` / `.ico` / PNG, 仅在内存中转成 data URL 显示; Claude Desktop 未安装时使用 Wikimedia Commons `Claude_AI_symbol.svg`（CC0）合成的识别图标, Cursor 未安装时仍用浅色字母占位。
 - 概览 Node.js 运行环境和扩展管理 MCP 占位改为公开识别图标: Simple Icons `nodedotjs`（CC0）与 MCP 官方 `favicon.svg`（MIT）。
-- 关于页仓库、头像和开源项目列表改为 `lilicocon/cursor-i18n-zh`; 版本检查与安装包下载仍使用上游 `svipm/cursor-i18n-zh` 的 GitHub Releases.
+- 关于页仓库、头像、开源项目列表、版本检查、发行版本页和更新包下载改为 `lilicocon/cursor-i18n-zh`.
 - 关于页热门项目置顶展示 [86jp_DfoGmTool](https://github.com/lilicocon/86jp_DfoGmTool)。
 
 ### 修复
@@ -25,6 +25,8 @@
 - 运行日志支持一键复制到剪贴板, 以及导出带时间戳的 `.txt` 文件, 方便排障时把现场日志发出去.
 - GitHub 项目列表、版本检查和扩展市场在未登录限流时改用同一条文案, 区分 HTTP 403 限流、429 过频和网络错误, 避免看起来像两个无关故障.
 - 消除 macOS 开发编译中 `backup_root` 未使用参数、以及仅 Windows 使用的 Claude 辅助函数死代码警告.
+- GitHub Actions 升级到 Node 24 运行时: `actions/cache` v5, `actions/upload-artifact` v6, `actions/download-artifact` v7, 消除 Node 20 弃用警告.
+- macOS/Windows 应用 identifier 改为 `com.licocon.i18n-workbench`. 已安装的旧版会被系统当成另一个应用, 旧 identifier 目录下的备份/配置不会自动迁移.
 
 ## [0.4.3] - 2026-08-18
 

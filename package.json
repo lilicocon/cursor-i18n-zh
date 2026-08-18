@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/svipm/cursor-i18n-zh.git"
+    "url": "https://github.com/lilicocon/cursor-i18n-zh.git"
   },
   "bin": {
     "cursor-i18n-zh": "src/cli.js"

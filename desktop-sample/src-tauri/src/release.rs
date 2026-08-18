@@ -12,9 +12,9 @@ use crate::adapters::local_app_data;
 use crate::network;
 
 const LATEST_RELEASE_API: &str =
-    "https://api.github.com/repos/svipm/cursor-i18n-zh/releases/latest";
+    "https://api.github.com/repos/lilicocon/cursor-i18n-zh/releases/latest";
 pub const PROJECT_REPOSITORY_URL: &str = "https://github.com/lilicocon/cursor-i18n-zh";
-pub const PROJECT_RELEASES_URL: &str = "https://github.com/svipm/cursor-i18n-zh/releases";
+pub const PROJECT_RELEASES_URL: &str = "https://github.com/lilicocon/cursor-i18n-zh/releases";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -208,7 +208,7 @@ fn release_asset_url(release: &Value, name: &str) -> Result<String, String> {
                     .flatten()
             })
         })
-        .filter(|url| url.starts_with("https://github.com/svipm/cursor-i18n-zh/releases/download/"))
+        .filter(|url| url.starts_with("https://github.com/lilicocon/cursor-i18n-zh/releases/download/"))
         .map(str::to_string)
         .ok_or_else(|| format!("发行版缺少更新资源: {name}"))
 }
@@ -463,10 +463,17 @@ mod tests {
         let release = serde_json::json!({
             "assets": [{
                 "name": "package.zip",
-                "browser_download_url": "https://github.com/svipm/cursor-i18n-zh/releases/download/v1.0.0/package.zip"
+                "browser_download_url": "https://github.com/lilicocon/cursor-i18n-zh/releases/download/v1.0.0/package.zip"
             }]
         });
         assert!(release_asset_url(&release, "package.zip").is_ok());
+        let foreign = serde_json::json!({
+            "assets": [{
+                "name": "package.zip",
+                "browser_download_url": "https://github.com/svipm/cursor-i18n-zh/releases/download/v1.0.0/package.zip"
+            }]
+        });
+        assert!(release_asset_url(&foreign, "package.zip").is_err());
         assert_eq!(
             checksum_for(
                 "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  package.zip\n",

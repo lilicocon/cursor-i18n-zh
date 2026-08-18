@@ -523,7 +523,7 @@
               <article id="updateStatusCard" class="about-update-card checking">
                 <div class="about-update-heading">
                   <div class="update-icon">↻</div>
-                  <div><h3>版本更新</h3><p>启动时后台检查上游正式发行版, 永不强制更新.</p></div>
+                  <div><h3>版本更新</h3><p>启动时后台检查本仓库正式发行版, 永不强制更新.</p></div>
                   <span id="updateState" class="pill neutral">正在检查</span>
                 </div>
                 <div class="update-version-facts">
@@ -575,7 +575,7 @@
                   <li>汉化会修改本机应用资源, 安装前必须完成对应版本备份和 SHA256 校验.</li>
                   <li>Cursor 用量监控只向 Cursor 自有接口查询数据, 登录令牌不返回前端、不写日志、不落盘.</li>
                   <li>MCP 密钥、环境变量和请求头只在 Rust 后端处理, 前端仅显示脱敏字段, 修改前自动备份配置.</li>
-                  <li>更新检查只读取上游仓库 GitHub 正式发行版信息, 不自动下载、不静默安装、不强制更新.</li>
+                  <li>更新检查只读取本仓库 GitHub 正式发行版信息, 不自动下载、不静默安装、不强制更新.</li>
                   <li>执行安装或恢复前请保存工作, 工作台会自动退出目标应用并确认进程完全结束.</li>
                 </ul>
                 <div class="about-actions">
@@ -733,7 +733,7 @@
                 <li>软件检测、备份、校验和恢复均在本机执行. 备份只保存在界面显示的本地目录.</li>
                 <li>Cursor 用量监控只读本机登录状态. 令牌仅在 Rust 后端内存中使用, 只发送给 Cursor 自有接口, 不返回前端、不写日志、不落盘.</li>
                 <li>扩展管理只读取用户选择范围内的 MCP 与 Skill. MCP 密钥和请求头不返回前端, 配置修改前会创建本地备份.</li>
-                <li>版本检查只向上游仓库 GitHub 请求公开发行版信息, 不携带 Cursor 或 Claude 账号信息, 不自动下载、不静默安装、不强制更新.</li>
+                <li>版本检查只向本仓库 GitHub 请求公开发行版信息, 不携带 Cursor 或 Claude 账号信息, 不自动下载、不静默安装、不强制更新.</li>
                 <li>GitHub 头像仅在打开关于页时按需加载. 不同意本说明可以直接退出, 工作台不会继续初始化.</li>
               </ul>
             </article>

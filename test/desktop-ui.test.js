@@ -139,9 +139,9 @@ test('desktop UI exposes About, GitHub and optional update checks', () => {
   assert.match(script, /invoke\("check_for_updates"\)/);
   assert.match(script, /invoke\("github_projects"\)/);
   assert.match(script, /86jp_DfoGmTool/);
-  assert.match(release, /api\.github\.com\/repos\/svipm\/cursor-i18n-zh\/releases\/latest/);
+  assert.match(release, /api\.github\.com\/repos\/lilicocon\/cursor-i18n-zh\/releases\/latest/);
   assert.match(release, /PROJECT_REPOSITORY_URL: &str = "https:\/\/github\.com\/lilicocon\/cursor-i18n-zh"/);
-  assert.match(release, /PROJECT_RELEASES_URL: &str = "https:\/\/github\.com\/svipm\/cursor-i18n-zh\/releases"/);
+  assert.match(release, /PROJECT_RELEASES_URL: &str = "https:\/\/github\.com\/lilicocon\/cursor-i18n-zh\/releases"/);
   assert.match(script, /invoke\("open_github_url"/);
   assert.match(script, /invoke\("open_project_page"/);
   assert.match(script, /function renderGitHubProjects\(/);
@@ -311,8 +311,8 @@ test('desktop release flow downloads verified optional updates and scans publish
   assert.match(buildWorkflow, /Scan sensitive information/);
   assert.match(buildWorkflow, /WINDOWS_CERTIFICATE/);
   assert.match(buildWorkflow, /Get-AuthenticodeSignature/);
-  assert.match(buildWorkflow, /actions\/cache\/restore@v4/);
-  assert.match(buildWorkflow, /actions\/cache\/save@v4/);
+  assert.match(buildWorkflow, /actions\/cache\/restore@v5/);
+  assert.match(buildWorkflow, /actions\/cache\/save@v5/);
 });
 
 test('desktop UI provides accessible focus, keyboard navigation and long-operation feedback', () => {
@@ -447,7 +447,9 @@ test('desktop and package versions are synchronized', () => {
   ));
   assert.match(packageJson.version, /^\d+\.\d+\.\d+$/);
   assert.equal(tauriConfig.version, packageJson.version);
+  assert.equal(tauriConfig.identifier, 'com.licocon.i18n-workbench');
   assert.ok(cargo.split(/\r?\n/).includes(`version = "${packageJson.version}"`));
+  assert.ok(cargo.split(/\r?\n/).includes('authors = ["licocon"]'));
   assert.ok(html.includes(`v${packageJson.version}`));
 });
 

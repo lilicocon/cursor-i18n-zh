@@ -324,7 +324,7 @@ function browserFallbackUpdateStatus() {
     latestVersion: "0.4.4",
     updateAvailable: false,
     currentAhead: false,
-    releaseUrl: "https://github.com/svipm/cursor-i18n-zh/releases",
+    releaseUrl: "https://github.com/lilicocon/cursor-i18n-zh/releases",
     publishedAt: new Date().toISOString(),
     message: "浏览器预览样例: 当前 v0.4.4 已是最新版本",
   };
@@ -882,7 +882,7 @@ async function openProjectPage(page) {
     else window.open(
       page === "repository"
         ? "https://github.com/lilicocon/cursor-i18n-zh"
-        : "https://github.com/svipm/cursor-i18n-zh/releases",
+        : "https://github.com/lilicocon/cursor-i18n-zh/releases",
       "_blank",
       "noopener,noreferrer",
     );

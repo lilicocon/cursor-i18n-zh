@@ -221,7 +221,7 @@ jobs:
 
       - name: Restore Tauri CLI cache
         id: tauri-cli-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ~/.cargo/bin/cargo-tauri
           key: tauri-cli-2.11.4-${{ runner.os }}-${{ runner.arch }}
@@ -232,7 +232,7 @@ jobs:
 
       - name: Save Tauri CLI cache
         if: steps.tauri-cli-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: ~/.cargo/bin/cargo-tauri
           key: tauri-cli-2.11.4-${{ runner.os }}-${{ runner.arch }}
@@ -244,7 +244,7 @@ jobs:
 
       - name: Upload compatibility reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cursor-${{ needs.detect.outputs.version }}-macos-compatibility-reports
           path: |
@@ -254,7 +254,7 @@ jobs:
           retention-days: 30
 
       - name: Upload validated macOS build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: localization-workbench-cursor-${{ needs.detect.outputs.version }}-macos
           path: |
