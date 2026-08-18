@@ -197,6 +197,14 @@ GitHub 自动兼容流程:
 4. 将代码替换量, 工作台入口数量, 账号用量入口和 Cursor NLS 命中量与上一兼容版本比较, 并导出新版本 UI 文案候选清单. 低于安全门限, 安装超时或任务取消时停止构建并自动创建 GitHub Issue; 同版本后续验证成功时自动补充运行链接并关闭该 Issue.
 5. 全部通过后构建 EXE, 完整便携包和 SHA256 文件并上传为 Actions Artifact, 同时上传兼容性报告和文案扫描结果, 然后记录新的稳定版兼容基线.
 
+macOS 自动兼容流程由独立工作流 `cursor-compat-macos.yml` 执行, 行为与 Windows 流程对应:
+
+1. 每 6 小时读取 Cursor 官方 `darwin-universal` 稳定版下载接口.
+2. 检测到 version 或 commit 变化后, 在隔离的 `macos-14` Runner 临时目录下载官方 DMG, 挂载后复制 `Cursor.app`, 限制 15 分钟并清理挂载点和 Cursor 进程; 失败时保留安装日志证据.
+3. 校验 Developer ID 签名, 实际安装版本和官方 commit, 然后执行完整 Node.js 测试及简繁双语言补丁预检.
+4. 低于安全门限, 安装超时或任务取消时停止构建并自动创建 GitHub Issue; 同版本后续验证成功时自动补充运行链接并关闭该 Issue.
+5. 全部通过后构建 `.app.zip`, DMG 和 SHA256 文件并上传为 Actions Artifact, 然后记录 `compat/cursor-stable-macos.json`.
+
 该流程只生成待验证构建产物, 不会自动创建正式 GitHub Release. 正式发布仍需项目版本号, 更新日志和 `v*` 标签.
 
 Claude Desktop 适配流程:

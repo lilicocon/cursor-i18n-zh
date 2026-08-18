@@ -1,0 +1,402 @@
+name: Cursor stable compatibility (macOS)
+
+on:
+  schedule:
+    - cron: '33 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 即使版本未变化也重新执行完整兼容性构建
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cursor-stable-compatibility-macos
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: macos-14
+    outputs:
+      changed: ${{ steps.release.outputs.changed }}
+      version: ${{ steps.release.outputs.version }}
+      commit: ${{ steps.release.outputs.commit }}
+      download_url: ${{ steps.release.outputs.download_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Detect Cursor stable release
+        id: release
+        env:
+          FORCE_COMPAT_CHECK: ${{ github.event_name == 'workflow_dispatch' && inputs.force == true }}
+        run: bash scripts/get-cursor-release-macos.sh
+
+      - name: Write detection summary
+        run: |
+          {
+            echo '## Cursor stable detection (macOS)'
+            echo
+            echo "- Version: \`${{ steps.release.outputs.version }}\`"
+            echo "- Commit: \`${{ steps.release.outputs.commit }}\`"
+            echo "- Build required: \`${{ steps.release.outputs.changed }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  compatibility:
+    if: needs.detect.outputs.changed == 'true'
+    needs: detect
+    runs-on: macos-14
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop-sample/src-tauri -> target
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Refresh and verify release metadata
+        env:
+          EXPECTED_VERSION: ${{ needs.detect.outputs.version }}
+          EXPECTED_COMMIT: ${{ needs.detect.outputs.commit }}
+          FORCE_COMPAT_CHECK: 'true'
+        run: |
+          set -euo pipefail
+          bash scripts/get-cursor-release-macos.sh
+          version="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("build/cursor-release-macos.json","utf8")).version)')"
+          commit="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("build/cursor-release-macos.json","utf8")).commit)')"
+          if [[ "$version" != "$EXPECTED_VERSION" || "$commit" != "$EXPECTED_COMMIT" ]]; then
+            echo 'Cursor stable changed while this workflow was starting. Run the workflow again.' >&2
+            exit 1
+          fi
+
+      - name: Download and install official Cursor build
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          RELEASE_FILE='build/cursor-release-macos.json'
+          export RELEASE_FILE
+          version="$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.env.RELEASE_FILE,"utf8")).version)')"
+          expected_commit="$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.env.RELEASE_FILE,"utf8")).commit)')"
+          download_url="$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.env.RELEASE_FILE,"utf8")).downloadUrl)')"
+          dmg="$RUNNER_TEMP/Cursor-$version.dmg"
+          mount="$RUNNER_TEMP/cursor-dmg-$version"
+          install_root="$RUNNER_TEMP/cursor-stable-$version"
+          app="$install_root/Cursor.app"
+          app_dir="$app/Contents/Resources/app"
+          product_path="$app_dir/product.json"
+          installer_log="$RUNNER_TEMP/cursor-install-$version.log"
+          mkdir -p "$mount" "$install_root"
+          : > "$installer_log"
+
+          cleanup() {
+            pkill -x Cursor 2>/dev/null || true
+            if mount | grep -Fq " on $mount "; then
+              hdiutil detach "$mount" -quiet || hdiutil detach "$mount" -force -quiet || true
+            fi
+          }
+          trap cleanup EXIT
+
+          echo "Downloading Cursor $version" | tee -a "$installer_log"
+          curl -fL --retry 3 --retry-delay 2 -o "$dmg" "$download_url"
+          xattr -dr com.apple.quarantine "$dmg" 2>/dev/null || true
+
+          echo "Attaching Cursor DMG" | tee -a "$installer_log"
+          hdiutil attach "$dmg" -readonly -nobrowse -mountpoint "$mount" -quiet
+          if [[ ! -d "$mount/Cursor.app" ]]; then
+            echo "Cursor DMG is missing Cursor.app" | tee -a "$installer_log"
+            ls -la "$mount" | tee -a "$installer_log"
+            exit 1
+          fi
+
+          echo "Copying Cursor.app to isolated install root" | tee -a "$installer_log"
+          ditto "$mount/Cursor.app" "$app"
+          xattr -dr com.apple.quarantine "$app" 2>/dev/null || true
+          hdiutil detach "$mount" -quiet || hdiutil detach "$mount" -force -quiet || true
+
+          codesign --verify --deep --strict "$app"
+          signer="$(codesign -dv --verbose=4 "$app" 2>&1 | tee -a "$installer_log")"
+          if ! grep -Eq 'Authority=.+(Anysphere|Cursor)' <<<"$signer"; then
+            echo "Unexpected Cursor.app signer" | tee -a "$installer_log"
+            exit 1
+          fi
+          subject="$(grep -E 'Authority=.+(Anysphere|Cursor)' <<<"$signer" | head -n 1)"
+
+          pkill -x Cursor 2>/dev/null || true
+          deadline=$((SECONDS + 12 * 60))
+          installed_commit=""
+          last_identity=""
+          while (( SECONDS < deadline )); do
+            if [[ -f "$product_path" ]]; then
+              identity="$(
+                PRODUCT_PATH="$product_path" node -e '
+                  const fs = require("fs");
+                  const product = JSON.parse(fs.readFileSync(process.env.PRODUCT_PATH, "utf8"));
+                  process.stdout.write(String(product.version || "") + "/" + String(product.commit || ""));
+                ' || true
+              )"
+              if [[ "$identity" != "$last_identity" && -n "$identity" ]]; then
+                echo "Detected installed Cursor identity: $identity" | tee -a "$installer_log"
+                last_identity="$identity"
+              fi
+              candidate_version="${identity%%/*}"
+              candidate_commit="${identity#*/}"
+              if [[ "$candidate_version" == "$version" && "$candidate_commit" =~ ^[0-9a-f]{40}$ ]]; then
+                if [[ "$candidate_commit" != "$expected_commit" ]]; then
+                  echo "Cursor API commit $expected_commit differs from signed installer product commit $candidate_commit. Both identities will be recorded." | tee -a "$installer_log"
+                fi
+                installed_commit="$candidate_commit"
+                break
+              fi
+            else
+              echo "Cursor product.json is not ready yet" | tee -a "$installer_log"
+            fi
+            sleep 3
+          done
+
+          if [[ -z "$installed_commit" ]]; then
+            echo "Cursor $version was not installed with the expected commit within 12 minutes. Last identity: $last_identity" | tee -a "$installer_log"
+            echo 'Cursor installer log tail:'
+            tail -n 160 "$installer_log"
+            exit 1
+          fi
+
+          {
+            echo "CURSOR_APP_DIR=$app_dir"
+            echo "CURSOR_INSTALLER_SIGNER=$subject"
+            echo "CURSOR_INSTALLED_COMMIT=$installed_commit"
+          } >> "$GITHUB_ENV"
+
+      - name: Run project tests
+        run: npm test
+
+      - name: Check Simplified Chinese compatibility
+        run: |
+          set -euo pipefail
+          baseline='compat/cursor-stable-macos.json'
+          if [[ ! -f "$baseline" ]]; then
+            baseline='compat/cursor-stable.json'
+          fi
+          node scripts/cursor-compat.js --locale zh-cn --baseline "$baseline" --output build/cursor-compat-macos-zh-cn.json
+
+      - name: Check Traditional Chinese compatibility
+        run: |
+          set -euo pipefail
+          baseline='compat/cursor-stable-macos.json'
+          if [[ ! -f "$baseline" ]]; then
+            baseline='compat/cursor-stable.json'
+          fi
+          node scripts/cursor-compat.js --locale zh-tw --baseline "$baseline" --output build/cursor-compat-macos-zh-tw.json
+
+      - name: Scan upstream UI text candidates
+        run: node src/cli.js scan
+
+      - name: Test desktop workbench
+        run: cargo test --locked --manifest-path desktop-sample/src-tauri/Cargo.toml
+
+      - name: Restore Tauri CLI cache
+        id: tauri-cli-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cargo/bin/cargo-tauri
+          key: tauri-cli-2.11.4-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Install Tauri CLI
+        if: steps.tauri-cli-cache.outputs.cache-hit != 'true'
+        run: cargo install tauri-cli --version '2.11.4' --locked
+
+      - name: Save Tauri CLI cache
+        if: steps.tauri-cli-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cargo/bin/cargo-tauri
+          key: tauri-cli-2.11.4-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Package macOS workbench
+        run: |
+          set -euo pipefail
+          CARGO_TERM_COLOR=never bash scripts/package-macos.sh 2>&1 | tee macos-compat-build.log
+
+      - name: Upload compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cursor-${{ needs.detect.outputs.version }}-macos-compatibility-reports
+          path: |
+            build/*.json
+            build/*.tsv
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload validated macOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: localization-workbench-cursor-${{ needs.detect.outputs.version }}-macos
+          path: |
+            dist/localization-workbench-v*-macos-app.zip
+            dist/localization-workbench-v*-macos.dmg
+            dist/SHA256SUMS-macos.txt
+          retention-days: 30
+
+      - name: Record validated Cursor stable version
+        if: github.ref_name == github.event.repository.default_branch
+        env:
+          CURSOR_VERSION: ${{ needs.detect.outputs.version }}
+        run: |
+          set -euo pipefail
+          node scripts/update-cursor-baseline.js \
+            --release build/cursor-release-macos.json \
+            --report build/cursor-compat-macos-zh-cn.json \
+            --output compat/cursor-stable-macos.json
+          if ! git diff --quiet -- compat/cursor-stable-macos.json; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add compat/cursor-stable-macos.json
+            git commit -m "Validate Cursor $CURSOR_VERSION on macOS"
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
+
+      - name: Write compatibility summary
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs = require("fs");
+            const report = JSON.parse(fs.readFileSync("build/cursor-compat-macos-zh-cn.json", "utf8"));
+            const metrics = report.evaluation.metrics;
+            const summary = [
+              `## Cursor ${process.env.CURSOR_VERSION} macOS compatibility passed`,
+              "",
+              `- Commit: \`${process.env.CURSOR_COMMIT}\``,
+              `- Installed product commit: \`${process.env.CURSOR_INSTALLED_COMMIT}\``,
+              `- Installer signer: \`${process.env.CURSOR_INSTALLER_SIGNER}\``,
+              `- Code replacements: \`${metrics.codeReplacements}\``,
+              `- Workbench bundles: \`${metrics.workbenchBundles}\``,
+              `- Account usage bundles: \`${metrics.accountUsageBundles}\``,
+              `- Cursor NLS replacements: \`${metrics.cursorNlsReplacements}\``,
+              "- Result: macOS DMG, app zip and SHA256 uploaded as workflow artifacts",
+              "",
+            ].join("\n");
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+          '
+        env:
+          CURSOR_VERSION: ${{ needs.detect.outputs.version }}
+          CURSOR_COMMIT: ${{ needs.detect.outputs.commit }}
+
+  report-failure:
+    if: always() && needs.detect.outputs.changed == 'true' && needs.compatibility.result != 'success'
+    needs:
+      - detect
+      - compatibility
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create or update compatibility issue
+        uses: actions/github-script@v7
+        env:
+          CURSOR_VERSION: ${{ needs.detect.outputs.version }}
+          CURSOR_COMMIT: ${{ needs.detect.outputs.commit }}
+          COMPATIBILITY_RESULT: ${{ needs.compatibility.result }}
+        with:
+          script: |
+            const title = `Cursor ${process.env.CURSOR_VERSION} macOS 自动兼容构建失败`;
+            const body = [
+              `Cursor stable ${process.env.CURSOR_VERSION} (${process.env.CURSOR_COMMIT}) 未通过 macOS 自动兼容构建.`,
+              `任务结果: ${process.env.COMPATIBILITY_RESULT}.`,
+              '',
+              `运行记录: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              '请检查官方 macOS 安装结构, 兼容性报告, 词典命中率和账号用量入口锚点.',
+            ].join('\n');
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = issues.data.find(issue => !issue.pull_request && issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
+
+  resolve-failure:
+    if: always() && needs.detect.outputs.changed == 'true' && needs.compatibility.result == 'success'
+    needs:
+      - detect
+      - compatibility
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Close resolved compatibility issue
+        uses: actions/github-script@v7
+        env:
+          CURSOR_VERSION: ${{ needs.detect.outputs.version }}
+          CURSOR_COMMIT: ${{ needs.detect.outputs.commit }}
+        with:
+          script: |
+            const title = `Cursor ${process.env.CURSOR_VERSION} macOS 自动兼容构建失败`;
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = issues.data.find(issue => !issue.pull_request && issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: [
+                  `Cursor ${process.env.CURSOR_VERSION} (${process.env.CURSOR_COMMIT}) 已通过 macOS 自动兼容构建.`,
+                  '',
+                  `通过运行: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                ].join('\n'),
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+            }

@@ -2,6 +2,12 @@
 
 本文件记录正式发布版本. `v0.3.2` 至 `v0.3.5` 是 `v0.3.6` 发布前的内部迭代, 未单独创建 GitHub Release.
 
+## [未发布]
+
+### 新增
+
+- 新增独立的 macOS Cursor 稳定版自动兼容工作流 `cursor-compat-macos.yml`. 每 6 小时读取 `darwin-universal` 官方下载接口, 在 `macos-14` 隔离目录挂载 DMG 并安装 `Cursor.app`, 校验代码签名后执行简繁补丁预检, 再构建 `.app.zip` / DMG 作为待验证产物; 失败开 Issue, 成功后写入 `compat/cursor-stable-macos.json` 并关闭对应 Issue.
+
 ## [0.4.3] - 2026-08-18
 
 ### 修复

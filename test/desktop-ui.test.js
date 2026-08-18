@@ -57,6 +57,14 @@ const release = fs.readFileSync(
 const securityCheck = fs.readFileSync(path.join(root, 'scripts', 'security-check.js'), 'utf8');
 const buildWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'build.yml'), 'utf8');
 const cursorCompatWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'cursor-compat.yml'), 'utf8');
+const cursorCompatMacosWorkflow = fs.readFileSync(
+  path.join(root, '.github', 'workflows', 'cursor-compat-macos.yml'),
+  'utf8',
+);
+const cursorReleaseMacos = fs.readFileSync(
+  path.join(root, 'scripts', 'get-cursor-release-macos.sh'),
+  'utf8',
+);
 
 test('desktop UI exposes usage and backup history controls', () => {
   for (const id of [
@@ -394,4 +402,33 @@ test('Cursor compatibility workflow bounds and cleans silent installer execution
   assert.match(cursorCompatWorkflow, /resolve-failure:[\s\S]+needs\.compatibility\.result == 'success'/);
   assert.match(cursorCompatWorkflow, /Close resolved compatibility issue/);
   assert.match(cursorCompatWorkflow, /state_reason: 'completed'/);
+});
+
+test('Cursor macOS compatibility workflow bounds and cleans silent installer execution', () => {
+  assert.match(cursorCompatMacosWorkflow, /runs-on:\s*macos-14/);
+  assert.match(cursorCompatMacosWorkflow, /compatibility:\s*[\s\S]*?timeout-minutes:\s*45/);
+  assert.match(cursorCompatMacosWorkflow, /Download and install official Cursor build\s*\n\s*timeout-minutes:\s*15/);
+  assert.match(cursorCompatMacosWorkflow, /hdiutil attach/);
+  assert.doesNotMatch(cursorCompatMacosWorkflow, /Start-Process -FilePath \$installer[^\n]+-Wait/);
+  assert.match(cursorCompatMacosWorkflow, /ditto "\$mount\/Cursor\.app" "\$app"/);
+  assert.match(cursorCompatMacosWorkflow, /codesign --verify --deep --strict/);
+  assert.match(cursorCompatMacosWorkflow, /Authority=\.\+\(Anysphere\|Cursor\)/);
+  assert.match(cursorCompatMacosWorkflow, /Detected installed Cursor identity/);
+  assert.match(cursorCompatMacosWorkflow, /tail -n 160 "\$installer_log"/);
+  assert.match(cursorCompatMacosWorkflow, /SECONDS \+ 12 \* 60/);
+  assert.match(cursorCompatMacosWorkflow, /candidate_version" == "\$version"/);
+  assert.match(cursorCompatMacosWorkflow, /candidate_commit" =~ \^\[0-9a-f\]\{40\}\$/);
+  assert.match(cursorCompatMacosWorkflow, /differs from signed installer product commit/);
+  assert.match(cursorCompatMacosWorkflow, /pkill -x Cursor/);
+  assert.match(cursorCompatMacosWorkflow, /hdiutil detach/);
+  assert.match(cursorCompatMacosWorkflow, /package-macos\.sh/);
+  assert.match(cursorCompatMacosWorkflow, /compat\/cursor-stable-macos\.json/);
+  assert.match(cursorCompatMacosWorkflow, /needs\.compatibility\.result != 'success'/);
+  assert.match(cursorCompatMacosWorkflow, /resolve-failure:[\s\S]+needs\.compatibility\.result == 'success'/);
+  assert.match(cursorCompatMacosWorkflow, /Close resolved compatibility issue/);
+  assert.match(cursorCompatMacosWorkflow, /macOS 自动兼容构建失败/);
+  assert.match(cursorCompatMacosWorkflow, /state_reason: 'completed'/);
+  assert.match(cursorReleaseMacos, /darwin-universal/);
+  assert.match(cursorReleaseMacos, /downloads\.cursor\.com/);
+  assert.match(cursorReleaseMacos, /FORCE_COMPAT_CHECK/);
 });
