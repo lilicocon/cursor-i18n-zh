@@ -45,12 +45,19 @@ pub fn detect() -> AppStatus {
         .compatible
         .then(|| node_runtime.version.clone())
         .flatten();
+    let node_executable = node_runtime
+        .compatible
+        .then(|| node_runtime.executable.clone())
+        .flatten()
+        .map(PathBuf::from);
     let version = app_dir.as_deref().and_then(read_version);
     let installed = app_dir.is_some();
     let compatibility = inspect_compatibility(app_dir.as_deref(), version.as_deref());
     let ready = installed && root.is_some() && node.is_some() && compatibility.compatible;
-    let backup = match (&root, &version, &node) {
-        (Some(root), Some(version), Some(_)) => inspect_backup(root, version),
+    let backup = match (&root, &version, &node_executable) {
+        (Some(root), Some(version), Some(node_executable)) => {
+            inspect_backup(node_executable, root, version)
+        }
         (Some(root), Some(version), None) => {
             let path = backup_root(root).join(version);
             BackupDetails {
@@ -234,7 +241,7 @@ pub fn run(request: &ActionRequest, sink: ProgressSink) -> Result<OperationResul
 
     if request.action == "install" {
         sink.emit(12, "INFO", "正在执行安装前备份完整性门禁.");
-        require_install_backup(&root, &request.locale)?;
+        require_install_backup(&node_executable, &root, &request.locale)?;
         sink.emit(16, "INFO", "当前版本备份已通过完整性门禁.");
     }
 
@@ -248,7 +255,12 @@ pub fn run(request: &ActionRequest, sink: ProgressSink) -> Result<OperationResul
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|error| format!("无法启动 Cursor 汉化引擎: {error}"))?;
+        .map_err(|error| {
+            format!(
+                "无法启动 Cursor 汉化引擎 ({}): {error}",
+                node_executable.display()
+            )
+        })?;
 
     let (sender, receiver) = mpsc::channel::<(&'static str, String)>();
     if let Some(stdout) = child.stdout.take() {
@@ -456,7 +468,7 @@ fn sha256_file_base64(path: &Path) -> Result<String, String> {
     Ok(STANDARD_NO_PAD.encode(hash.finalize()))
 }
 
-fn inspect_backup(root: &Path, version: &str) -> BackupDetails {
+fn inspect_backup(node_executable: &Path, root: &Path, version: &str) -> BackupDetails {
     let path = backup_root(root).join(version);
     let display_path = Some(path.to_string_lossy().into_owned());
     let files = backup_file_count(&path);
@@ -469,7 +481,7 @@ fn inspect_backup(root: &Path, version: &str) -> BackupDetails {
         };
     }
 
-    match run_cli_quiet(root, "backup-check", "zh-cn") {
+    match run_cli_quiet(node_executable, root, "backup-check", "zh-cn") {
         Ok(message) => BackupDetails {
             available: true,
             path: display_path,
@@ -501,8 +513,8 @@ fn backup_file_count(path: &Path) -> usize {
         .unwrap_or(0)
 }
 
-fn require_install_backup(root: &Path, locale: &str) -> Result<(), String> {
-    run_cli_quiet(root, "backup-check", locale)
+fn require_install_backup(node_executable: &Path, root: &Path, locale: &str) -> Result<(), String> {
+    run_cli_quiet(node_executable, root, "backup-check", locale)
         .map(|_| ())
         .map_err(|error| {
             format!(
@@ -511,15 +523,25 @@ fn require_install_backup(root: &Path, locale: &str) -> Result<(), String> {
         })
 }
 
-fn run_cli_quiet(root: &Path, command: &str, locale: &str) -> Result<String, String> {
-    let output = hidden_command("node")
+fn run_cli_quiet(
+    node_executable: &Path,
+    root: &Path,
+    command: &str,
+    locale: &str,
+) -> Result<String, String> {
+    let output = hidden_command(&node_executable.to_string_lossy())
         .arg(root.join("src").join("cli.js"))
         .arg(command)
         .args(["--locale", locale])
         .env("CURSOR_I18N_BACKUP_ROOT", backup_root(root))
         .current_dir(root)
         .output()
-        .map_err(|error| format!("无法启动 Cursor 汉化引擎: {error}"))?;
+        .map_err(|error| {
+            format!(
+                "无法启动 Cursor 汉化引擎 ({}): {error}",
+                node_executable.display()
+            )
+        })?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     let detail = stdout
@@ -918,6 +940,28 @@ mod tests {
         let incompatible = inspect_compatibility(Some(&root), Some("99.0.0"));
         assert!(!incompatible.compatible);
         assert!(incompatible.message.contains("已停止自动适配"));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    /// macOS 图形界面启动的应用不继承 shell PATH, 只有解析出的绝对路径才能拉起 Node.js.
+    #[cfg(unix)]
+    #[test]
+    fn runs_backup_check_with_resolved_node_outside_path() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let root = sandbox();
+        fs::create_dir_all(root.join("src")).unwrap();
+        fs::write(root.join("src/cli.js"), "").unwrap();
+        let node = root.join("node-stub");
+        fs::write(&node, "#!/bin/sh\necho '备份校验通过: 7 个文件'\n").unwrap();
+        fs::set_permissions(&node, fs::Permissions::from_mode(0o755)).unwrap();
+
+        let detail = run_cli_quiet(&node, &root, "backup-check", "zh-cn").unwrap();
+        assert_eq!(detail, "备份校验通过: 7 个文件");
+
+        let missing =
+            run_cli_quiet(&root.join("absent-node"), &root, "backup-check", "zh-cn").unwrap_err();
+        assert!(missing.contains("absent-node"), "{missing}");
         let _ = fs::remove_dir_all(root);
     }
 
