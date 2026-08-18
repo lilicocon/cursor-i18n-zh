@@ -600,11 +600,13 @@ fn backup_root(engine_root: &Path) -> PathBuf {
     if let Some(path) = std::env::var_os("CURSOR_I18N_BACKUP_ROOT").map(PathBuf::from) {
         return path;
     }
-    if cfg!(target_os = "macos") {
-        local_app_data().join("backups/cursor")
-    } else {
-        engine_root.join("backup")
+    #[cfg(target_os = "macos")]
+    {
+        let _ = engine_root;
+        return local_app_data().join("backups/cursor");
     }
+    #[cfg(not(target_os = "macos"))]
+    engine_root.join("backup")
 }
 
 pub fn node_runtime_status() -> NodeRuntimeStatus {

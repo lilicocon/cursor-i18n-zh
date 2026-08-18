@@ -16,6 +16,10 @@
 - 关于页仓库、头像和开源项目列表改为 `lilicocon/cursor-i18n-zh`; 版本检查与安装包下载仍使用上游 `svipm/cursor-i18n-zh` 的 GitHub Releases.
 - 关于页热门项目置顶展示 [86jp_DfoGmTool](https://github.com/lilicocon/86jp_DfoGmTool)。
 
+### 修复
+
+- 修复 Windows CI 编译失败: `backup_root` 改回按平台 `cfg` 编译, 避免在 Windows 上引用仅 macOS 导入的 `local_app_data`.
+
 ### 改进
 
 - 运行日志支持一键复制到剪贴板, 以及导出带时间戳的 `.txt` 文件, 方便排障时把现场日志发出去.
