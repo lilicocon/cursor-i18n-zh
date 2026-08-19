@@ -22,8 +22,19 @@ use tauri::{AppHandle, Emitter};
 use usage::UsageOverview;
 
 #[tauri::command]
-fn detect_apps() -> Vec<AppStatus> {
-    adapters::detect_all()
+fn has_first_run_consent() -> bool {
+    adapters::has_first_run_consent()
+}
+
+#[tauri::command]
+fn accept_first_run_consent() -> Result<(), String> {
+    adapters::accept_first_run_consent()
+}
+
+#[tauri::command]
+fn detect_apps() -> Result<Vec<AppStatus>, String> {
+    adapters::require_first_run_consent()?;
+    Ok(adapters::detect_all())
 }
 
 #[tauri::command]
@@ -33,6 +44,7 @@ fn environment_status() -> EnvironmentStatus {
 
 #[tauri::command]
 async fn list_backups() -> Result<Vec<BackupRecord>, String> {
+    adapters::require_first_run_consent()?;
     tauri::async_runtime::spawn_blocking(adapters::list_backups)
         .await
         .map_err(|error| format!("备份扫描线程异常: {error}"))
@@ -40,6 +52,7 @@ async fn list_backups() -> Result<Vec<BackupRecord>, String> {
 
 #[tauri::command]
 async fn cursor_usage() -> Result<UsageOverview, String> {
+    adapters::require_first_run_consent()?;
     tauri::async_runtime::spawn_blocking(usage::load_cursor_usage)
         .await
         .map_err(|error| format!("用量读取线程异常: {error}"))?
@@ -47,6 +60,7 @@ async fn cursor_usage() -> Result<UsageOverview, String> {
 
 #[tauri::command]
 async fn cursor_sessions() -> Result<CursorSessionOverview, String> {
+    adapters::require_first_run_consent()?;
     tauri::async_runtime::spawn_blocking(sessions::load_cursor_sessions)
         .await
         .map_err(|error| format!("会话读取线程异常: {error}"))?
@@ -54,6 +68,7 @@ async fn cursor_sessions() -> Result<CursorSessionOverview, String> {
 
 #[tauri::command]
 async fn manage_cursor_session(request: SessionActionRequest) -> Result<CursorSessionOverview, String> {
+    adapters::require_first_run_consent()?;
     tauri::async_runtime::spawn_blocking(move || sessions::manage_cursor_session(request))
         .await
         .map_err(|error| format!("会话操作线程异常: {error}"))?
@@ -61,6 +76,7 @@ async fn manage_cursor_session(request: SessionActionRequest) -> Result<CursorSe
 
 #[tauri::command]
 async fn check_for_updates() -> Result<UpdateStatus, String> {
+    adapters::require_first_run_consent()?;
     tauri::async_runtime::spawn_blocking(release::check_for_updates)
         .await
         .map_err(|error| format!("版本检查线程异常: {error}"))?
@@ -68,6 +84,7 @@ async fn check_for_updates() -> Result<UpdateStatus, String> {
 
 #[tauri::command]
 async fn download_latest_update(app: AppHandle) -> Result<release::UpdateDownloadResult, String> {
+    adapters::require_first_run_consent()?;
     tauri::async_runtime::spawn_blocking(move || {
         release::download_latest_update(|percent, message| {
             let _ = app.emit(
@@ -143,6 +160,7 @@ fn save_run_logs(contents: String, filename: String) -> Result<String, String> {
 
 #[tauri::command]
 async fn github_projects() -> Result<Vec<github::GitHubProject>, String> {
+    adapters::require_first_run_consent()?;
     tauri::async_runtime::spawn_blocking(github::load_projects)
         .await
         .map_err(|error| format!("GitHub 项目读取线程异常: {error}"))?
@@ -495,6 +513,7 @@ fn open_external(target: &std::ffi::OsStr, label: &str) -> Result<(), String> {
 
 #[tauri::command]
 async fn run_app_action(app: AppHandle, request: ActionRequest) -> Result<OperationResult, String> {
+    adapters::require_first_run_consent()?;
     let sink = ProgressSink::new(app, &request);
     tauri::async_runtime::spawn_blocking(move || adapters::run_action(request, sink))
         .await
@@ -570,6 +589,8 @@ fn restart_elevated(executable: &std::path::Path) -> Result<std::process::ExitSt
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            has_first_run_consent,
+            accept_first_run_consent,
             detect_apps,
             environment_status,
             list_backups,

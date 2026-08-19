@@ -70,7 +70,7 @@
     <img src="assets/screenshots/cursor-localized-settings.png" alt="Cursor 中文设置和套餐用量" width="92%">
   </a>
 </p>
-<p align="center"><strong>Cursor 中文设置和套餐用量</strong><br><sub>截图基于 Cursor 3.11.19, 账号身份和本机路径信息已经遮挡.</sub></p>
+<p align="center"><strong>Cursor 中文设置和套餐用量</strong><br><sub>截图基于 Cursor 3.16 设置页, 账号身份和本机路径信息已经遮挡.</sub></p>
 
 <p align="center">
   <a href="assets/screenshots/workbench-extensions.png">

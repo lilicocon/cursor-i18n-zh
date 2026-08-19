@@ -3,8 +3,12 @@ pub mod cursor;
 mod icons;
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
+
+const FIRST_RUN_CONSENT_FILE: &str = "first-run-consent";
+const FIRST_RUN_CONSENT_VALUE: &str = "accepted";
 
 #[cfg(any(target_os = "macos", test))]
 const MACOS_RESIGN_SCRIPT: &str = include_str!("../../../resources/macos/resign-app.sh");
@@ -293,6 +297,40 @@ pub fn local_app_data() -> PathBuf {
     local_app_data_platform()
 }
 
+fn first_run_consent_path(dir: &Path) -> PathBuf {
+    dir.join(FIRST_RUN_CONSENT_FILE)
+}
+
+fn has_first_run_consent_in(dir: &Path) -> bool {
+    fs::read_to_string(first_run_consent_path(dir))
+        .ok()
+        .is_some_and(|value| value.trim() == FIRST_RUN_CONSENT_VALUE)
+}
+
+fn accept_first_run_consent_in(dir: &Path) -> Result<(), String> {
+    fs::create_dir_all(dir).map_err(|error| format!("无法保存首次启动确认: {error}"))?;
+    fs::write(first_run_consent_path(dir), FIRST_RUN_CONSENT_VALUE)
+        .map_err(|error| format!("无法保存首次启动确认: {error}"))?;
+    restore_user_ownership(dir);
+    Ok(())
+}
+
+pub fn has_first_run_consent() -> bool {
+    has_first_run_consent_in(&local_app_data())
+}
+
+pub fn accept_first_run_consent() -> Result<(), String> {
+    accept_first_run_consent_in(&local_app_data())
+}
+
+pub fn require_first_run_consent() -> Result<(), String> {
+    if has_first_run_consent() {
+        Ok(())
+    } else {
+        Err("请先阅读并同意软件声明与隐私说明".to_string())
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn local_app_data_platform() -> PathBuf {
     std::env::var_os("LOCALAPPDATA")
@@ -345,7 +383,26 @@ fn local_app_data_platform() -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::{resign_macos_app, MACOS_RESIGN_SCRIPT};
+    use super::{
+        accept_first_run_consent_in, has_first_run_consent_in, resign_macos_app, MACOS_RESIGN_SCRIPT,
+    };
+
+    #[test]
+    fn first_run_consent_file_is_required_before_local_privileges() {
+        let root = std::env::temp_dir().join(format!(
+            "i18n-workbench-consent-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        assert!(!has_first_run_consent_in(&root));
+        accept_first_run_consent_in(&root).unwrap();
+        assert!(has_first_run_consent_in(&root));
+        let _ = std::fs::remove_dir_all(&root);
+    }
 
     #[test]
     fn macos_resign_script_preserves_nested_code_and_critical_entitlements() {

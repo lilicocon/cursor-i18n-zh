@@ -68,6 +68,7 @@ Microsoft 官方 Cursor 中文语言包仅通过 Cursor CLI 按需安装或读�
 - 安装 Windows 或 macOS 版 Claude Desktop.
 - 安全预检不需要管理员权限.
 - 安装和恢复 WindowsApps 或 `/Applications/Claude.app` 中的资源时, 使用界面的“重新打开并授权”按钮.
+- Cursor 装在用户目录时不用授权; 只有系统 `/Applications/Cursor.app` 才需要授权.
 - 设置 `CLAUDE_RESOURCES_DIR` 可指定自定义 `app/resources` 目录.
 - Windows 备份保存到 `%LOCALAPPDATA%\I18nWorkbench`, macOS 保存到 `~/Library/Application Support/I18nWorkbench`.
 - macOS 修改后按嵌套 Mach-O, Framework, Helper App 和外层应用顺序执行本机 ad-hoc 重签名, 保留并复验 Claude 虚拟化 entitlement.
@@ -164,7 +165,7 @@ Microsoft 官方 Cursor 中文语言包仅通过 Cursor CLI 按需安装或读�
 
 - 新增 macOS Cursor 与 Claude Desktop 定位, 权限, 进程退出和应用重签名支持.
 - 新增 macOS `.app.zip` 与 DMG 原生 GitHub Actions 构建.
-- macOS 构建强制校验 Universal 双架构, Info.plist, 签名, ZIP 和 DMG 挂载结构, 并兼容 GUI 环境下常见 Node.js 安装路径.
+- macOS 构建按架构拆分 ARM64 / x64, 校验 Info.plist, 签名, ZIP 和 DMG 挂载结构, 并兼容 GUI 环境下常见 Node.js 安装路径.
 - 新增 MCP, Skill 和提示词市场, GitHub 仓库入口与提交版本更新检查.
 - 优化扩展管理操作反馈, 字号可读性, 键盘导航, 焦点状态和减少动态效果体验.
 - 新增 Cursor 项目规则与 Claude Code 项目/个人提示词规则管理.
