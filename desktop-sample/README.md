@@ -1,4 +1,4 @@
-# 汉化工作台 v0.4.5
+# 汉化工作台 v0.4.6
 
 执行以下约束:
 
@@ -221,7 +221,7 @@ npm run package-desktop
 
 ```text
 src-tauri\target\x86_64-pc-windows-msvc\release\cursor-i18n-desktop-sample.exe
-..\dist\localization-workbench-v0.4.5-windows-x64.exe
-..\dist\localization-workbench-v0.4.5-windows-x64.zip
+..\dist\localization-workbench-v0.4.6-windows-x64.exe
+..\dist\localization-workbench-v0.4.6-windows-x64.zip
 ..\dist\SHA256SUMS-windows-x64.txt
 ```

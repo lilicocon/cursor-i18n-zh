@@ -4,6 +4,8 @@
 
 ## [未发布]
 
+## [0.4.6] - 2026-08-19
+
 ### 改进
 
 - 桌面工作台在 Windows 和 macOS 上统一使用 macOS 交互: 左侧红绿灯、双击标题栏缩放、⌘/Ctrl+W 关闭面板、⌘/Ctrl+R 重新扫描、⌘/Ctrl+M 最小化; 文案改为「应用程序」「标准用户 / 已授权」「触控 ID」等 macOS 习惯用语.
@@ -268,6 +270,7 @@
 - 改进 NLS 合并, 繁体转换和 JavaScript tokenizer 替换引擎.
 - 增加 CI 词典检查, ZIP 冒烟测试和 GitHub Release 自动发布.
 
+[0.4.6]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.2...v0.4.3
