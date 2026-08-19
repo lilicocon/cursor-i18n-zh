@@ -1,4 +1,4 @@
-# 汉化工作台 v0.4.6
+# 汉化工作台 v0.4.7
 
 执行以下约束:
 
@@ -107,14 +107,21 @@ Microsoft 官方 Cursor 中文语言包仅通过 Cursor CLI 按需安装或读�
 
 - 只读 `%APPDATA%\Cursor\User\globalStorage\state.vscdb`.
 - 只读取 Cursor 登录令牌和缓存邮箱, 凭据仅保留在 Rust 内存中.
-- 仅向 Cursor 自有的套餐和模型用量接口发送凭据, 不写日志, 不返回前端, 不保存到工作台数据目录.
-- 前端只接收套餐名称, 用量数字, 计费周期, 账户邮箱和模型汇总.
+- 仅向 Cursor 自有的套餐、模型用量和网页请求记录接口发送凭据, 不写日志, 不返回前端, 不保存到工作台数据目录.
+- 前端只接收套餐名称, 用量数字, 计费周期, 按天汇总, 请求记录, 账户邮箱和模型汇总.
 - Cursor 未登录, 登录过期或网络不可用时, 在用量卡片中显示明确错误, 不影响汉化和备份功能.
+
+## Cursor 会话管理
+
+- 只枚举本机 Cursor 主进程、Helper 和可识别的远程控制 / Agent 工作进程.
+- 远程控制同时只允许一个工作区; 检测到占用时可在确认后结束工作进程或整个进程树.
+- 只读对话索引的标题、工作区和云端标记, 不读取消息正文.
+- 被标成 Cloud Agent 的对话会列出来. 杀进程修不好这个标记. 标错或已结束、且云端任务不在跑的条目, 可在 Cursor 退出后备份 `state.vscdb` 并清掉本机云端标记, 改回本地继续. 这不会改云端会话, 也不会恢复远程控制.
 
 ## 首次启动和隐私
 
 - 首次启动必须阅读软件声明和隐私说明, 勾选同意后才能进入工作台.
-- 同意前禁止应用扫描、Cursor 用量读取、GitHub 版本检查和 GitHub 头像加载.
+- 同意前禁止应用扫描、Cursor 用量读取、会话进程枚举、GitHub 版本检查和 GitHub 头像加载.
 - 同意结果只保存在当前 WebView 的本地存储中, 不上传到任何服务.
 - 关于页提供完整声明的重新查看入口, GitHub 头像仅在打开关于页时按需加载.
 - 工作台不包含遥测或行为分析, 本地备份内容和操作日志不会上传.
@@ -221,7 +228,7 @@ npm run package-desktop
 
 ```text
 src-tauri\target\x86_64-pc-windows-msvc\release\cursor-i18n-desktop-sample.exe
-..\dist\localization-workbench-v0.4.6-windows-x64.exe
-..\dist\localization-workbench-v0.4.6-windows-x64.zip
+..\dist\localization-workbench-v0.4.7-windows-x64.exe
+..\dist\localization-workbench-v0.4.7-windows-x64.zip
 ..\dist\SHA256SUMS-windows-x64.txt
 ```

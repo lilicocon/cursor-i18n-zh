@@ -79,6 +79,16 @@ test('desktop UI exposes usage and backup history controls', () => {
     'refreshUsageButton',
     'usageContent',
     'usageModelList',
+    'usageDailyTab',
+    'usageEventsTab',
+    'usageDayList',
+    'usageEventList',
+    'refreshSessionsButton',
+    'sessionProcessList',
+    'sessionConsentCheckbox',
+    'sessionKillRemoteButton',
+    'sessionDetachChatsButton',
+    'sessionChatList',
     'backupHistoryList',
     'restoreConsentCheckbox',
     'backupRestoreProgress',
@@ -88,6 +98,34 @@ test('desktop UI exposes usage and backup history controls', () => {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
   assert.match(script, /invoke\("cursor_usage"\)/);
+  assert.match(script, /invoke\("cursor_sessions"\)/);
+  assert.match(script, /invoke\("manage_cursor_session"/);
+  assert.match(script, /confirm: action !== "refresh"/);
+  assert.match(script, /function canUseLocalPrivileges\(/);
+  assert.match(script, /detach-chats/);
+  assert.match(script, /function renderSessions\(/);
+  assert.match(script, /data-usage-tab/);
+  assert.match(desktopMain, /mod sessions;/);
+  assert.match(desktopMain, /cursor_sessions,/);
+  assert.match(desktopMain, /manage_cursor_session,/);
+  const usageRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'usage.rs'), 'utf8');
+  const sessionsRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'sessions.rs'), 'utf8');
+  const chatsRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'chats.rs'), 'utf8');
+  assert.match(usageRs, /api\/dashboard\/get-filtered-usage-events/);
+  assert.match(usageRs, /Origin.*cursor\.com/);
+  assert.match(usageRs, /fn classify_pool/);
+  assert.match(sessionsRs, /kill-remote/);
+  assert.match(sessionsRs, /remote-control/);
+  assert.match(sessionsRs, /detach-chats/);
+  assert.match(chatsRs, /createdFromBackgroundAgent/);
+  assert.match(chatsRs, /isArchived/);
+  assert.match(chatsRs, /fn detach_stuck_chats/);
+  assert.match(chatsRs, /misclassified/);
+  assert.match(chatsRs, /fn is_live_status/);
+  assert.match(chatsRs, /fn is_finished_status/);
+  assert.match(chatsRs, /fn composer_index_fields/);
+  assert.match(script, /function chatStateLabel\(/);
+  assert.match(sessionsRs, /is_workbench_process/);
   assert.match(script, /invoke\("list_backups"\)/);
   assert.match(script, /backupVersion:\s*record\.version/);
   assert.match(script, /function runBackupRestore\(/);
@@ -108,6 +146,9 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(actionBody, /modalCompletedAction\s*=\s*action/);
   assert.match(styles, /\.backup-history-row/);
   assert.match(styles, /\.usage-model-row/);
+  assert.match(styles, /\.usage-day-row/);
+  assert.match(styles, /\.session-process-row/);
+  assert.match(styles, /\.session-chat-row/);
 });
 
 test('desktop UI exposes About, GitHub and optional update checks', () => {
@@ -364,11 +405,13 @@ test('desktop UI gates first launch before local or network initialization', () 
   assert.match(html, /隐私说明/);
   assert.match(script, /i18nWorkbench\.firstRunConsent\.v2/);
   assert.match(script, /if \(!browserPreviewSection\) await waitForFirstRunConsent\(\);\s*await refreshEnvironmentAndApps\(\);/);
+  assert.match(script, /function canUseLocalPrivileges\(/);
+  assert.match(script, /if \(!canUseLocalPrivileges\(\)\) return;/);
   assert.match(script, /get\("preview"\)/);
   assert.match(script, /\["about", "extensions"\]\.includes\(requestedBrowserPreview\)/);
   assert.ok(
     script.indexOf('await waitForFirstRunConsent();')
-      < script.indexOf('await Promise.all([loadUsage(), loadUpdateStatus({ notify: true })]);'),
+      < script.indexOf('await Promise.all([loadUsage(), loadSessions(), loadUpdateStatus({ notify: true })]);'),
   );
 });
 
@@ -494,6 +537,7 @@ test('Cursor compatibility workflow bounds and cleans silent installer execution
   assert.match(cursorCompatWorkflow, /resolve-failure:[\s\S]+needs\.compatibility\.result == 'success'/);
   assert.match(cursorCompatWorkflow, /Close resolved compatibility issue/);
   assert.match(cursorCompatWorkflow, /state_reason: 'completed'/);
+  assert.match(cursorCompatWorkflow, /status === 410/);
 });
 
 test('Cursor macOS compatibility workflow bounds and cleans silent installer execution', () => {
@@ -520,6 +564,7 @@ test('Cursor macOS compatibility workflow bounds and cleans silent installer exe
   assert.match(cursorCompatMacosWorkflow, /Close resolved compatibility issue/);
   assert.match(cursorCompatMacosWorkflow, /macOS 自动兼容构建失败/);
   assert.match(cursorCompatMacosWorkflow, /state_reason: 'completed'/);
+  assert.match(cursorCompatMacosWorkflow, /status === 410/);
   assert.match(cursorReleaseMacos, /darwin-universal/);
   assert.match(cursorReleaseMacos, /downloads\.cursor\.com/);
   assert.match(cursorReleaseMacos, /FORCE_COMPAT_CHECK/);

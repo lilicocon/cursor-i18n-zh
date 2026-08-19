@@ -286,6 +286,7 @@ function buildPatchPlan(ctx) {
     appliedAt: new Date().toISOString(),
     files: {},
     accountUsageEmbedded: [],
+    accountUsageSkipped: [],
     misses: [],
   };
 
@@ -297,6 +298,9 @@ function buildPatchPlan(ctx) {
     for (const en of counts.keys()) hit.add(en);
     report.files[rel] = total;
     if (accountUsage.injected) report.accountUsageEmbedded.push(rel);
+    else if (accountUsage.reason && accountUsage.reason !== 'already-present') {
+      report.accountUsageSkipped.push(`${rel}: ${accountUsage.reason}`);
+    }
     codeFiles.set(rel, text);
     entries.push({ target: path.join(ctx.appDir, rel), data: text });
   }
@@ -337,6 +341,8 @@ function logPatchPlan(ctx, plan, prefix) {
   }
   if (plan.report.accountUsageEmbedded.length) {
     log(`Cursor 账号页用量: 已嵌入 ${plan.report.accountUsageEmbedded.length} 个工作台入口包`);
+  } else if (plan.report.accountUsageSkipped && plan.report.accountUsageSkipped.length) {
+    log(`[警告] Cursor 账号页用量未嵌入 (${plan.report.accountUsageSkipped.join('; ')})`);
   }
   if (!plan.nls) {
     log(`[nls 跳过] 当前 Cursor 版本无 ${NLS_KEYS} 或 ${NLS_MESSAGES}`);

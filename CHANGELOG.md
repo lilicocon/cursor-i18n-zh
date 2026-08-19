@@ -2,7 +2,18 @@
 
 本文件记录正式发布版本. `v0.3.2` 至 `v0.3.5` 是 `v0.3.6` 发布前的内部迭代, 未单独创建 GitHub Release.
 
-## [未发布]
+## [0.4.7] - 2026-08-19
+
+### 新增
+
+- 用量监控同步 cursor.com 网页请求记录: 按天、套餐内 / API 按量、具体模型汇总 Token, 并列出计费事件. 周期接口失败时仍保留原有套餐概览.
+- 新增 Cursor 会话与进程管理: 识别主窗口和远程控制工作进程占用, 可在确认后结束工作进程、退出 Cursor、结束进程树或重新启动.
+- 会话页列出被标成 Cloud Agent / 远程控制的对话. 杀进程修不好这个标记. 标错或已结束、且云端任务不在跑的条目, 可在 Cursor 退出后备份 state.vscdb, 再清掉本机云端标记改回本地继续; 不会改云端会话, 也不会恢复远程控制. 解除前必须确认; 未结束的云端任务、工作台自身进程和对话正文都不会被当作可改对象.
+
+### 修复
+
+- 适配 Cursor 3.16 React 设置页: 账号用量入口改嵌到 General 页账号区下方, 不再依赖 3.14 的 Solid 锚点和 Preferences 顺序.
+- 自动兼容工作流在仓库关闭 Issues 时不再因 HTTP 410 二次失败.
 
 ## [0.4.6] - 2026-08-19
 
@@ -270,6 +281,7 @@
 - 改进 NLS 合并, 繁体转换和 JavaScript tokenizer 替换引擎.
 - 增加 CI 词典检查, ZIP 冒烟测试和 GitHub Release 自动发布.
 
+[0.4.7]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.3...v0.4.4

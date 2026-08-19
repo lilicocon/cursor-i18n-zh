@@ -46,6 +46,9 @@
           <button class="nav-item" data-section="usage">
             <span class="nav-icon">◉</span><span>用量监控</span>
           </button>
+          <button class="nav-item" data-section="sessions">
+            <span class="nav-icon">☰</span><span>会话管理</span>
+          </button>
           <button class="nav-item" data-section="extensions">
             <span class="nav-icon">⬡</span><span>扩展管理</span>
             <span id="extensionNavBadge" class="nav-badge"><img class="nav-badge-mark" src="mcp-logo.png" alt="" />MCP</span>
@@ -64,7 +67,7 @@
             <div><strong id="permissionTitle">正在检查权限</strong><small id="permissionText">请稍候...</small></div>
           </div>
           <div class="version-row">
-            <span>双应用工作台</span><span>v0.4.6</span>
+            <span>双应用工作台</span><span>v0.4.7</span>
           </div>
         </div>
       </aside>
@@ -141,7 +144,7 @@
               <div class="app-meta stacked-meta">
                 <span id="cursorVersion">版本: 检测中</span>
                 <span id="cursorInstallState">正在定位 resources/app...</span>
-                <span class="adapter-state">适配器 v0.4.6</span>
+                <span class="adapter-state">适配器 v0.4.7</span>
                 <span id="cursorCompatibility" class="compatibility-state">正在检测新版本兼容性</span>
               </div>
               <button class="primary-button configure-button" data-open-app="cursor">配置汉化 <span>→</span></button>
@@ -178,53 +181,164 @@
             <div class="section-heading usage-heading">
               <div>
                 <h2>Cursor 用量监控</h2>
-                <p>只读本机 Cursor 登录状态, 访问令牌仅在 Rust 后端内存中使用.</p>
+                <p>套餐汇总来自 Cursor 官方用量接口; 按天和模型明细优先同步网页请求记录, 令牌不回传前端.</p>
               </div>
               <button id="refreshUsageButton" class="secondary-button"><span>↻</span>刷新用量</button>
             </div>
 
             <div id="usageError" class="usage-error hidden"></div>
             <div id="usageContent" class="usage-content loading">
-              <div class="usage-card-grid">
-                <article class="usage-card plan-card">
-                  <span>当前套餐</span>
-                  <strong id="usageMembership">正在读取</strong>
-                  <small id="usageAccount">等待 Cursor 登录状态</small>
+              <div class="usage-tabs extension-segment compact" role="tablist" aria-label="用量视图">
+                <button id="usageOverviewTab" class="active" data-usage-tab="overview" role="tab" aria-selected="true">概览</button>
+                <button id="usageDailyTab" data-usage-tab="daily" role="tab" aria-selected="false">按天</button>
+                <button id="usageEventsTab" data-usage-tab="events" role="tab" aria-selected="false">请求记录</button>
+              </div>
+              <p id="usageEventsNote" class="usage-sync-note hidden"></p>
+
+              <div id="usageOverviewPanel" class="usage-panel" data-usage-panel="overview">
+                <div class="usage-card-grid">
+                  <article class="usage-card plan-card">
+                    <span>当前套餐</span>
+                    <strong id="usageMembership">正在读取</strong>
+                    <small id="usageAccount">等待 Cursor 登录状态</small>
+                  </article>
+                  <article class="usage-card">
+                    <span>套餐用量</span>
+                    <strong id="usagePlanAmount">-- / --</strong>
+                    <small id="usageRemaining">剩余 --</small>
+                  </article>
+                  <article class="usage-card">
+                    <span>模型请求</span>
+                    <strong id="usageRequests">--</strong>
+                    <small id="usageTokens">Token --</small>
+                  </article>
+                </div>
+
+                <article class="usage-overview-card">
+                  <div class="usage-progress-heading">
+                    <div><span>本计费周期使用进度</span><small id="usageCycle">--</small></div>
+                    <strong id="usagePercent">0%</strong>
+                  </div>
+                  <div class="usage-meter"><div id="usageMeterBar"></div></div>
+                  <div class="usage-meter-notes">
+                    <span id="usageApiPercent">API 用量 0%</span>
+                    <span id="usagePoolTokens">套餐 Token -- · API Token --</span>
+                    <span id="usageRefreshedAt">尚未刷新</span>
+                  </div>
                 </article>
-                <article class="usage-card">
-                  <span>套餐用量</span>
-                  <strong id="usagePlanAmount">-- / --</strong>
-                  <small id="usageRemaining">剩余 --</small>
-                </article>
-                <article class="usage-card">
-                  <span>模型请求</span>
-                  <strong id="usageRequests">--</strong>
-                  <small id="usageTokens">Token --</small>
+
+                <article class="usage-model-card">
+                  <div class="usage-model-heading">
+                    <div><h3>模型明细</h3><p id="usageModelSource">有请求记录时按网页账单汇总, 否则显示周期接口.</p></div>
+                    <span id="usageModelCount">0 个模型</span>
+                  </div>
+                  <div class="usage-model-columns" aria-hidden="true">
+                    <span>模型</span><span>请求</span><span>套餐 Token</span><span>API Token</span><span>合计</span>
+                  </div>
+                  <div id="usageModelList" class="usage-model-list">
+                    <div class="empty-row">正在读取用量数据...</div>
+                  </div>
                 </article>
               </div>
 
-              <article class="usage-overview-card">
-                <div class="usage-progress-heading">
-                  <div><span>本计费周期使用进度</span><small id="usageCycle">--</small></div>
-                  <strong id="usagePercent">0%</strong>
-                </div>
-                <div class="usage-meter"><div id="usageMeterBar"></div></div>
-                <div class="usage-meter-notes">
-                  <span id="usageApiPercent">API 用量 0%</span>
-                  <span id="usageRefreshedAt">尚未刷新</span>
-                </div>
-              </article>
+              <div id="usageDailyPanel" class="usage-panel hidden" data-usage-panel="daily">
+                <article class="usage-model-card">
+                  <div class="usage-model-heading">
+                    <div><h3>按天统计</h3><p>按 UTC 日期汇总网页请求记录中的套餐内用量和 API / 按量用量.</p></div>
+                    <span id="usageDayCount">0 天</span>
+                  </div>
+                  <div class="usage-day-columns" aria-hidden="true">
+                    <span>日期</span><span>套餐请求</span><span>API 请求</span><span>套餐 Token</span><span>API Token</span><span>计费</span>
+                  </div>
+                  <div id="usageDayList" class="usage-model-list">
+                    <div class="empty-row">正在读取按天用量...</div>
+                  </div>
+                </article>
+              </div>
 
+              <div id="usageEventsPanel" class="usage-panel hidden" data-usage-panel="events">
+                <article class="usage-model-card">
+                  <div class="usage-model-heading">
+                    <div><h3>网页请求记录</h3><p>同步 cursor.com 用量页的计费事件, 含模型、套餐/API 池和 Token.</p></div>
+                    <span id="usageEventCount">0 条</span>
+                  </div>
+                  <div class="usage-event-columns" aria-hidden="true">
+                    <span>时间</span><span>模型</span><span>池</span><span>Token</span><span>计费</span><span>来源</span>
+                  </div>
+                  <div id="usageEventList" class="usage-model-list">
+                    <div class="empty-row">正在同步请求记录...</div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <section id="sessions" class="session-section scroll-anchor">
+            <div class="section-heading usage-heading">
+              <div>
+                <h2>Cursor 会话与进程</h2>
+                <p>查看本机进程占用, 以及被错误标成 Cloud Agent 的对话. 杀进程修不好这个标记; 解除只改本地索引, 不会恢复远程控制.</p>
+              </div>
+              <button id="refreshSessionsButton" class="secondary-button"><span>↻</span>刷新会话</button>
+            </div>
+
+            <div id="sessionsError" class="usage-error hidden"></div>
+            <div id="sessionsContent" class="usage-content loading">
+              <div class="usage-card-grid">
+                <article class="usage-card plan-card">
+                  <span>会话状态</span>
+                  <strong id="sessionStatus">正在检测</strong>
+                  <small id="sessionSummary">等待本机进程列表</small>
+                </article>
+                <article class="usage-card">
+                  <span>远程控制</span>
+                  <strong id="sessionRemoteState">--</strong>
+                  <small id="sessionMainCount">主进程 --</small>
+                </article>
+                <article class="usage-card">
+                  <span>相关进程</span>
+                  <strong id="sessionProcessCount">--</strong>
+                  <small id="sessionLaunchPath">启动路径未检测</small>
+                </article>
+              </div>
+              <p id="sessionDetail" class="session-detail">正在检测 Cursor 进程树...</p>
+              <label class="session-consent">
+                <input id="sessionConsentCheckbox" type="checkbox" />
+                <span>我已保存 Cursor 中的工作, 并同意结束所选进程或在退出后改写本机对话索引.</span>
+              </label>
+              <div class="session-actions">
+                <button id="sessionKillRemoteButton" class="secondary-button" disabled>结束远程控制工作进程</button>
+                <button id="sessionQuitButton" class="secondary-button" disabled>退出 Cursor</button>
+                <button id="sessionKillTreeButton" class="danger-button" disabled>结束全部进程</button>
+                <button id="sessionDetachChatsButton" class="secondary-button" disabled>把标错或卡住的对话改回本地</button>
+                <button id="sessionStartButton" class="primary-button" disabled>启动 Cursor</button>
+              </div>
               <article class="usage-model-card">
                 <div class="usage-model-heading">
-                  <div><h3>模型明细</h3><p>按请求次数排序.</p></div>
-                  <span id="usageModelCount">0 个模型</span>
+                  <div><h3>进程列表</h3><p>只展示 Cursor 主进程、Helper 和可识别的远程控制 / Agent 工作进程.</p></div>
+                  <span id="sessionOccupiedBadge">未占用</span>
                 </div>
-                <div class="usage-model-columns" aria-hidden="true">
-                  <span>模型</span><span>请求</span><span>上限</span><span>Token</span>
+                <div class="session-process-columns" aria-hidden="true">
+                  <span>角色</span><span>PID</span><span>名称</span><span>内存</span><span>命令</span>
                 </div>
-                <div id="usageModelList" class="usage-model-list">
-                  <div class="empty-row">正在读取用量数据...</div>
+                <div id="sessionProcessList" class="usage-model-list">
+                  <div class="empty-row">正在读取进程...</div>
+                </div>
+              </article>
+              <article class="usage-model-card">
+                <div class="usage-model-heading">
+                  <div>
+                    <h3>标成 Cloud Agent 的对话</h3>
+                    <p>只读本机对话索引的标题和工作区, 不读取消息正文. 标错或已结束的条目可在 Cursor 退出后解除云端标记.</p>
+                  </div>
+                  <span id="sessionChatCount">0 条</span>
+                </div>
+                <p id="sessionChatNote" class="session-detail">正在读取对话索引...</p>
+                <div class="session-chat-columns" aria-hidden="true">
+                  <span>对话</span><span>工作区</span><span>状态</span><span>问题</span>
+                </div>
+                <div id="sessionChatList" class="usage-model-list">
+                  <div class="empty-row">正在读取对话索引...</div>
                 </div>
               </article>
             </div>
@@ -498,7 +612,7 @@
               </div>
               <div class="about-hero-emblem" aria-hidden="true">
                 <strong>译</strong>
-                <span class="about-version-badge">v0.4.6</span>
+                <span class="about-version-badge">v0.4.7</span>
               </div>
             </div>
 
@@ -511,7 +625,7 @@
                   </div>
                   <div><h3>lilicocon / 汉化工作台</h3><p>Cursor 与 Claude Desktop 本地化管理工具</p></div>
                 </div>
-                <p class="about-description">提供版本备份, 完整性校验, 汉化安装, 原版恢复和 Cursor 用量监控. 所有本机修改流程均可审计.</p>
+                <p class="about-description">提供版本备份, 完整性校验, 汉化安装, 原版恢复, Cursor 用量监控和会话管理. 所有本机修改流程均可审计.</p>
                 <code class="about-repository">github.com/lilicocon/cursor-i18n-zh</code>
                 <div class="about-actions">
                   <button class="primary-button github-button" data-project-page="repository">
@@ -529,7 +643,7 @@
                   <span id="updateState" class="pill neutral">正在检查</span>
                 </div>
                 <div class="update-version-facts">
-                  <span>当前版本<strong id="updateCurrentVersion">v0.4.6</strong></span>
+                  <span>当前版本<strong id="updateCurrentVersion">v0.4.7</strong></span>
                   <span>最新版本<strong id="updateLatestVersion">--</strong></span>
                 </div>
                 <p id="updateMessage" class="update-message">正在连接 GitHub 检查正式发行版...</p>
@@ -575,7 +689,8 @@
                 <ul>
                   <li>本项目是第三方开源工具, 与 Cursor、Anthropic 及其关联公司无官方关系.</li>
                   <li>汉化会修改本机应用资源, 安装前必须完成对应版本备份和 SHA256 校验.</li>
-                  <li>Cursor 用量监控只向 Cursor 自有接口查询数据, 登录令牌不返回前端、不写日志、不落盘.</li>
+                  <li>Cursor 用量监控只向 Cursor 自有接口查询周期汇总和网页请求记录, 登录令牌不返回前端、不写日志、不落盘.</li>
+                  <li>会话管理只读取本机 Cursor 进程和对话索引标题. 解除 Cloud Agent 标记会先备份 state.vscdb, 且必须先退出 Cursor; 不会改云端会话, 也不会读取消息正文.</li>
                   <li>MCP 密钥、环境变量和请求头只在 Rust 后端处理, 前端仅显示脱敏字段, 修改前自动备份配置.</li>
                   <li>更新检查只读取本仓库 GitHub 正式发行版信息, 不自动下载、不静默安装、不强制更新.</li>
                   <li>执行安装或恢复前请保存工作, 工作台会自动退出目标应用并确认进程完全结束.</li>
@@ -733,7 +848,8 @@
               <ul>
                 <li>工作台不包含遥测、行为分析或广告组件, 不上传个人文件、备份内容和操作日志.</li>
                 <li>软件检测、备份、校验和恢复均在本机执行. 备份只保存在界面显示的本地目录.</li>
-                <li>Cursor 用量监控只读本机登录状态. 令牌仅在 Rust 后端内存中使用, 只发送给 Cursor 自有接口, 不返回前端、不写日志、不落盘.</li>
+                <li>Cursor 用量监控只读本机登录状态. 令牌仅在 Rust 后端内存中使用, 只发送给 Cursor 自有接口查询周期汇总和网页请求记录, 不返回前端、不写日志、不落盘.</li>
+                <li>会话管理只枚举本机 Cursor 进程, 并只读对话索引的标题与云端标记, 不读取消息正文. 解除 Cloud Agent 标记必须先退出 Cursor, 并先备份 state.vscdb.</li>
                 <li>扩展管理只读取用户选择范围内的 MCP 与 Skill. MCP 密钥和请求头不返回前端, 配置修改前会创建本地备份.</li>
                 <li>版本检查只向本仓库 GitHub 请求公开发行版信息, 不携带 Cursor 或 Claude 账号信息, 不自动下载、不静默安装、不强制更新.</li>
                 <li>GitHub 头像仅在打开关于页时按需加载. 不同意本说明可以直接退出, 工作台不会继续初始化.</li>

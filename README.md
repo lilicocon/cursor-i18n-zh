@@ -1,7 +1,7 @@
 <div align="center">
   <h1>汉化工作台</h1>
   <p><strong>为 Cursor 和 Claude Desktop 提供安全, 可恢复, 可持续维护的中文本地化体验</strong></p>
-  <p>版本识别 · 强制备份 · 一键汉化 · 原版恢复 · 用量监控 · MCP/Skill/提示词管理 · 扩展市场 · Windows/macOS</p>
+  <p>版本识别 · 强制备份 · 一键汉化 · 原版恢复 · 用量监控 · 会话管理 · MCP/Skill/提示词管理 · 扩展市场 · Windows/macOS</p>
 
   <p>
     <a href="https://github.com/lilicocon/cursor-i18n-zh/actions/workflows/build.yml"><img alt="构建状态" src="https://github.com/lilicocon/cursor-i18n-zh/actions/workflows/build.yml/badge.svg"></a>
@@ -60,7 +60,7 @@
     <td width="50%" align="center" valign="top">
       <a href="assets/screenshots/workbench-usage.png"><img src="assets/screenshots/workbench-usage.png" alt="Cursor 用量监控"></a><br>
       <strong>Cursor 用量监控</strong><br>
-      <sub>展示套餐, 计费周期, 请求数, Token 和模型用量, 登录令牌不会传入前端.</sub>
+      <sub>展示套餐, 计费周期, 按天 Token, 套餐/API 池和网页请求记录, 登录令牌不会传入前端.</sub>
     </td>
   </tr>
 </table>
@@ -88,6 +88,8 @@
 - 自动发现已知入口和新增的 `out/vs/workbench/workbench.*.js` 大型入口包.
 - 在写入前生成完整补丁计划, 校验 JavaScript 语法, NLS 占位符和词典歧义.
 - 将 Cursor 原生套餐和用量区域保留在账号设置中, 并提供独立用量监控页.
+- 用量页同步网页请求记录, 按天、套餐内 / API 按量和模型展示 Token, 不在本地另做一套估算.
+- 会话管理页列出本机 Cursor 进程、远程控制工作进程, 以及被标成 Cloud Agent 的对话; 标错或卡住且云端已不在跑的条目可在退出后改回本地.
 
 ### Claude Desktop
 
@@ -132,12 +134,14 @@ app/resources/ion-dist/i18n/dynamic/en-US.json
 - 安装, 备份和恢复前自动结束目标应用完整进程树, 并等待文件锁释放.
 - 使用暂存文件统一提交修改. 任一步写入或复验失败时自动回滚已经提交的文件.
 - 在界面中检测 Node.js 版本, 管理员权限, 应用兼容状态和备份状态.
-- 首次启动先显示软件声明与隐私说明. 用户同意前不扫描本机应用, 不读取用量, 不检查版本.
+- 首次启动先显示软件声明与隐私说明. 用户同意前不扫描本机应用, 不读取用量, 不枚举会话进程, 不检查版本.
 - 启动后可选检查 GitHub 最新正式版本. 用户可以手动下载官方 Release 更新包, 工作台会校验 SHA256 后打开所在目录, 不静默安装, 不强制更新.
 - 更新包使用 64 KB 缓冲区流式写入磁盘并同步计算 SHA256, 不再把最大 250 MB 的安装包整体保存在内存中.
 - 已下载且 SHA256 与当前 Release 清单一致的更新包会直接复用; 损坏缓存会重新下载并通过可回滚的原子替换提交.
 - 关于页在下载过程中显示实时进度和当前阶段, 无 Content-Length 时仍显示累计下载 MB 数.
 - GitHub 项目、扩展市场、版本检查和更新下载会对 HTTP 500/502/503/504、超时及短暂连接失败执行有限重试, 403/404 等永久错误不会重复请求.
+- 用量页同步 cursor.com 请求记录, 按天、套餐内 / API 按量和模型展示 Token.
+- 会话页列出本机 Cursor 进程和远程控制工作进程, 确认后可结束占用或重新启动.
 - 在独立扩展管理页维护 Cursor 与 Claude Code 的 MCP, Skill 和提示词, 支持用户级与项目级作用域及 GitHub 更新检查.
 - 扩展检查与市场安装显示统一进度反馈; 键盘遵循 macOS 习惯: Esc 关闭面板, ⌘/Ctrl+W 关闭当前面板或窗口, ⌘/Ctrl+R 重新扫描, ⌘/Ctrl+M 最小化, 方向键切换 Tab, 并为焦点和减少动态效果提供无障碍适配.
 
@@ -146,10 +150,10 @@ app/resources/ion-dist/i18n/dynamic/en-US.json
 从 [最新发行版](https://github.com/lilicocon/cursor-i18n-zh/releases/latest) 按系统架构下载对应安装包:
 
 ```text
-Windows x86（Intel/AMD 64 位）: localization-workbench-v0.4.6-windows-x64.zip
-Windows ARM:                   localization-workbench-v0.4.6-windows-arm64.zip
-macOS ARM（Apple Silicon）:    localization-workbench-v0.4.6-macos-arm64.dmg
-macOS x86（Intel）:            localization-workbench-v0.4.6-macos-x64.dmg
+Windows x86（Intel/AMD 64 位）: localization-workbench-v0.4.7-windows-x64.zip
+Windows ARM:                   localization-workbench-v0.4.7-windows-arm64.zip
+macOS ARM（Apple Silicon）:    localization-workbench-v0.4.7-macos-arm64.dmg
+macOS x86（Intel）:            localization-workbench-v0.4.7-macos-x64.dmg
 ```
 
 桌面界面在 Windows 和 macOS 上都使用 macOS 交互习惯: 左侧红绿灯, 双击标题栏缩放, ⌘W / Ctrl+W 关闭面板. 文件对话框仍使用系统原生窗口.
@@ -226,8 +230,8 @@ Claude Desktop 适配流程:
 
 macOS 构建由 GitHub Actions 的 `macos-14` Runner 按架构分别生成:
 
-- `localization-workbench-v0.4.6-macos-arm64.dmg`: Apple Silicon 推荐安装包.
-- `localization-workbench-v0.4.6-macos-x64.dmg`: Intel Mac 推荐安装包.
+- `localization-workbench-v0.4.7-macos-arm64.dmg`: Apple Silicon 推荐安装包.
+- `localization-workbench-v0.4.7-macos-x64.dmg`: Intel Mac 推荐安装包.
 - 对应的 `-macos-arm64-app.zip` / `-macos-x64-app.zip` 保留完整 `.app` 便携压缩包.
 - 不再生成 Universal Binary; 请按本机芯片选择 ARM 或 x86 包.
 - 从 Finder 启动时会定位 PATH, Homebrew, NVM, Volta, asdf, mise 和 fnm 中的 Node.js, 并使用检测到的实际可执行文件运行 Cursor 引擎.
@@ -263,9 +267,11 @@ macOS 构建由 GitHub Actions 的 `macos-14` Runner 按架构分别生成:
 
 - 只读 `%APPDATA%\Cursor\User\globalStorage\state.vscdb` 中的 Cursor 登录状态.
 - 登录凭据只保存在 Rust 后端内存中, 只发送给 Cursor 官方用量接口.
-- 前端只接收套餐, 计费周期, 请求数, Token 数和模型用量结果.
+- 前端只接收套餐, 计费周期, 请求数, Token 数, 按天汇总, 网页请求记录和模型用量结果.
 - 不把登录令牌返回 JavaScript, 不写日志, 不落盘, 不上传个人文件.
 - GitHub 版本检查只发送公开发行版请求, 不携带 Cursor 或 Claude 账号信息.
+- 会话管理枚举本机 Cursor 进程, 并只读对话索引的标题与云端标记, 不读取消息正文.
+- 解除错误的 Cloud Agent 标记必须先退出 Cursor, 先备份 `state.vscdb`, 只改本机索引; 不会改云端会话, 也不会让该对话重新变成远程控制.
 
 ## 命令行和开发验证
 
@@ -305,11 +311,11 @@ GitHub Actions 会并行执行四种架构的构建: Windows x64、Windows ARM64
 
 ## 发布产物
 
-- `localization-workbench-v0.4.6-windows-x64.zip` / `.exe`: Windows x86（Intel/AMD 64 位）推荐下载.
-- `localization-workbench-v0.4.6-windows-arm64.zip` / `.exe`: Windows ARM 安装包.
-- `localization-workbench-v0.4.6-macos-arm64.dmg`: Apple Silicon 推荐安装包.
-- `localization-workbench-v0.4.6-macos-x64.dmg`: Intel Mac 推荐安装包.
-- `localization-workbench-v0.4.6-macos-arm64-app.zip` / `-macos-x64-app.zip`: 对应架构的 `.app` 便携包.
+- `localization-workbench-v0.4.7-windows-x64.zip` / `.exe`: Windows x86（Intel/AMD 64 位）推荐下载.
+- `localization-workbench-v0.4.7-windows-arm64.zip` / `.exe`: Windows ARM 安装包.
+- `localization-workbench-v0.4.7-macos-arm64.dmg`: Apple Silicon 推荐安装包.
+- `localization-workbench-v0.4.7-macos-x64.dmg`: Intel Mac 推荐安装包.
+- `localization-workbench-v0.4.7-macos-arm64-app.zip` / `-macos-x64-app.zip`: 对应架构的 `.app` 便携包.
 - `cursor-i18n-zh-windows.zip`: Cursor 终端版和传统入口.
 - `SHA256SUMS.txt` / `SHA256SUMS-macos.txt`: 各平台发布文件的 SHA256 校验值.
 

@@ -282,27 +282,36 @@ jobs:
               '',
               '请检查官方安装结构, 兼容性报告, 词典命中率和账号用量入口锚点.',
             ].join('\n');
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              per_page: 100,
-            });
-            const existing = issues.data.find(issue => !issue.pull_request && issue.title === title);
-            if (existing) {
-              await github.rest.issues.createComment({
+            try {
+              const issues = await github.rest.issues.listForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: existing.number,
-                body,
+                state: 'open',
+                per_page: 100,
               });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body,
-              });
+              const existing = issues.data.find(issue => !issue.pull_request && issue.title === title);
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body,
+                });
+              } else {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  body,
+                });
+              }
+            } catch (error) {
+              const status = error.status ?? error.response?.status;
+              if (status === 410 || status === 403) {
+                core.warning(`仓库 Issues 不可用 (${status}), 已跳过失败工单.`);
+                return;
+              }
+              throw error;
             }
 
   resolve-failure:
@@ -322,29 +331,38 @@ jobs:
         with:
           script: |
             const title = `Cursor ${process.env.CURSOR_VERSION} 自动兼容构建失败`;
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              per_page: 100,
-            });
-            const existing = issues.data.find(issue => !issue.pull_request && issue.title === title);
-            if (existing) {
-              await github.rest.issues.createComment({
+            try {
+              const issues = await github.rest.issues.listForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: existing.number,
-                body: [
-                  `Cursor ${process.env.CURSOR_VERSION} (${process.env.CURSOR_COMMIT}) 已通过自动兼容构建.`,
-                  '',
-                  `通过运行: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-                ].join('\n'),
+                state: 'open',
+                per_page: 100,
               });
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.number,
-                state: 'closed',
-                state_reason: 'completed',
-              });
+              const existing = issues.data.find(issue => !issue.pull_request && issue.title === title);
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: [
+                    `Cursor ${process.env.CURSOR_VERSION} (${process.env.CURSOR_COMMIT}) 已通过自动兼容构建.`,
+                    '',
+                    `通过运行: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                  ].join('\n'),
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                  state_reason: 'completed',
+                });
+              }
+            } catch (error) {
+              const status = error.status ?? error.response?.status;
+              if (status === 410 || status === 403) {
+                core.warning(`仓库 Issues 不可用 (${status}), 已跳过关闭工单.`);
+                return;
+              }
+              throw error;
             }
