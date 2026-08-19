@@ -167,29 +167,22 @@ fn classify_chat(header: &Value, data: Option<&Value>, cloud: &CloudIndex) -> Op
         .unwrap_or(false);
     let bc_id = first_text(header, data, &["bcId", "bcID", "backgroundComposerId", "cloudAgentId", "cloudAgentBcId"]);
     let status = first_text(header, data, &["status"]).unwrap_or_else(|| "unknown".to_string());
-    let in_cloud_repo = cloud.contains(&composer_id)
-        || bc_id
-            .as_deref()
-            .is_some_and(|id| cloud.contains(id) || cloud.contains(&format!("bc-{composer_id}")));
     let cloud_status = bc_id
         .as_deref()
         .and_then(|id| cloud.status_of(id))
         .or_else(|| cloud.status_of(&composer_id))
         .or_else(|| cloud.status_of(&format!("bc-{composer_id}")));
     let flagged = created_from_background || bc_id.is_some();
-    if !flagged && !in_cloud_repo {
+    if !flagged {
         return None;
     }
     let stuck_status = is_stuck_status(&status);
     let cloud_stuck = cloud_status.is_some_and(is_stuck_status);
     let finished = is_finished_status(&status);
     let live = is_live_status(&status) || cloud_status.is_some_and(is_live_status);
-    let can_detach = !live && (archived || stuck_status || cloud_stuck || (flagged && finished));
-    if !flagged && !can_detach {
-        return None;
-    }
+    let can_detach = !live && (archived || stuck_status || cloud_stuck || finished);
     let cloud_bound = true;
-    let (kind, reason) = if live {
+    let (kind, reason) = if !can_detach {
         (
             "cloud-bound",
             "索引仍标成 Cloud Agent / 远程控制会话, 且云端任务还在跑或可继续跟进. 杀进程修不好这条标记; 还在跑时不要改.",
@@ -243,29 +236,21 @@ fn composers_from_value(value: &Value) -> Vec<Value> {
 
 #[derive(Default)]
 struct CloudIndex {
-    ids: HashSet<String>,
     status_by_id: HashMap<String, String>,
 }
 
 impl CloudIndex {
-    fn contains(&self, id: &str) -> bool {
-        self.ids.contains(id)
-    }
-
     fn status_of(&self, id: &str) -> Option<&str> {
         self.status_by_id.get(id).map(String::as_str)
     }
 
     fn record(&mut self, id: &str, status: Option<&str>) {
-        self.ids.insert(id.to_string());
+        let Some(status) = status.filter(|value| !value.is_empty()) else {
+            return;
+        };
+        self.status_by_id.insert(id.to_string(), status.to_string());
         if let Some(stripped) = id.strip_prefix("bc-") {
-            self.ids.insert(stripped.to_string());
-        }
-        if let Some(status) = status.filter(|value| !value.is_empty()) {
-            self.status_by_id.insert(id.to_string(), status.to_string());
-            if let Some(stripped) = id.strip_prefix("bc-") {
-                self.status_by_id.insert(stripped.to_string(), status.to_string());
-            }
+            self.status_by_id.insert(stripped.to_string(), status.to_string());
         }
     }
 }
