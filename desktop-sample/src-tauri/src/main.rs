@@ -4,6 +4,7 @@
 )]
 
 mod adapters;
+mod chats;
 mod extensions;
 mod github;
 mod market;

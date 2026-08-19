@@ -347,9 +347,25 @@ function browserFallbackSessions() {
     status: "远程控制占用",
     detail: "浏览器预览样例: 远程控制工作进程仍在运行, 可能占用本机会话.",
     launchPath: "浏览器预览模式\\Cursor.exe",
+    stuckChatCount: 1,
+    chatError: null,
+    chatBackupPath: null,
     processes: [
       { pid: 2201, ppid: 1, name: "cursor-agent", role: "remote-control", memoryKb: 84200, command: "cursor-agent --remote-control" },
       { pid: 1044, ppid: 1, name: "Cursor", role: "main", memoryKb: 512000, command: "Cursor.exe" },
+    ],
+    chats: [
+      {
+        composerId: "aaaa-1",
+        name: "卡住的远程控制",
+        workspace: "D:/work/demo",
+        status: "aborted",
+        kind: "stuck-archived",
+        reason: "远程控制交接后被归档, 本机仍把它当成云端会话.",
+        archived: true,
+        cloudBound: true,
+        canDetach: true,
+      },
     ],
   };
 }
@@ -947,6 +963,7 @@ function updateSessionActionButtons() {
   $("#sessionKillRemoteButton").disabled = busy || !consent || !sessions?.remoteControlRunning;
   $("#sessionQuitButton").disabled = busy || !consent || !sessions?.running;
   $("#sessionKillTreeButton").disabled = busy || !consent || !sessions?.running;
+  $("#sessionDetachChatsButton").disabled = busy || !consent || !sessions?.stuckChatCount || Boolean(sessions?.running);
   $("#sessionStartButton").disabled = busy || Boolean(sessions?.running && sessions?.mainCount);
 }
 
@@ -987,6 +1004,44 @@ function renderSessions(sessions) {
       values[3].textContent = process.command || "--";
       values[3].title = process.command || "";
       list.appendChild(row);
+    }
+  }
+
+  const chats = Array.isArray(sessions.chats) ? sessions.chats : [];
+  $("#sessionChatCount").textContent = `${chats.length} 条`;
+  const chatNote = $("#sessionChatNote");
+  if (sessions.chatError) {
+    chatNote.textContent = `对话索引未读取: ${sessions.chatError}`;
+  } else if (sessions.chatBackupPath) {
+    chatNote.textContent = `已备份状态库到 ${sessions.chatBackupPath}, 再打开同一工作区即可继续原对话.`;
+  } else if (sessions.stuckChatCount) {
+    chatNote.textContent = `有 ${sessions.stuckChatCount} 条已卡住, 需先结束 Cursor 再解除云端标记. 未卡住但仍绑定云端的条目不要动.`;
+  } else if (chats.length) {
+    chatNote.textContent = "这些对话仍标成 Cloud Agent, 但还没有归档或中断, 可能是还在跑的云端任务.";
+  } else {
+    chatNote.textContent = "没有发现被标成 Cloud Agent 的对话.";
+  }
+  const chatList = $("#sessionChatList");
+  chatList.replaceChildren();
+  if (!chats.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-row";
+    empty.textContent = sessions.chatError ? "对话索引读取失败." : "没有需要显示的 Cloud Agent 对话.";
+    chatList.appendChild(empty);
+  } else {
+    for (const chat of chats) {
+      const row = document.createElement("div");
+      row.className = `session-chat-row ${chat.canDetach ? "occupied" : ""}`;
+      row.innerHTML = "<strong></strong><span></span><span></span><span></span>";
+      row.querySelector("strong").textContent = chat.name || "未命名对话";
+      row.querySelector("strong").title = chat.composerId || "";
+      const values = row.querySelectorAll("span");
+      values[0].textContent = chat.workspace || "--";
+      values[0].title = chat.workspace || "";
+      values[1].textContent = chat.canDetach ? "卡住" : "仍绑定";
+      values[2].textContent = chat.reason || "";
+      values[2].title = chat.reason || "";
+      chatList.appendChild(row);
     }
   }
   updateSessionActionButtons();
@@ -1037,6 +1092,7 @@ async function runSessionAction(action) {
       quit: "已请求退出 Cursor",
       "kill-tree": "已结束 Cursor 进程树",
       "kill-remote": "已结束远程控制工作进程",
+      "detach-chats": "已把卡住的对话改回本地索引",
       start: "已启动 Cursor",
     };
     addLog("DONE", labels[action] || "会话操作已完成.");
@@ -3408,6 +3464,7 @@ $("#sessionConsentCheckbox").addEventListener("change", updateSessionActionButto
 $("#sessionKillRemoteButton").addEventListener("click", () => runSessionAction("kill-remote"));
 $("#sessionQuitButton").addEventListener("click", () => runSessionAction("quit"));
 $("#sessionKillTreeButton").addEventListener("click", () => runSessionAction("kill-tree"));
+$("#sessionDetachChatsButton").addEventListener("click", () => runSessionAction("detach-chats"));
 $("#sessionStartButton").addEventListener("click", () => runSessionAction("start"));
 $("#checkUpdateButton").addEventListener("click", () => loadUpdateStatus({ notify: true }));
 $("#downloadUpdateButton").addEventListener("click", downloadLatestUpdate);

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::adapters;
+use crate::chats::{self, StuckChat};
 
 const POLL_ATTEMPTS: u32 = 8;
 const POLL_INTERVAL_MS: u64 = 250;
@@ -30,6 +31,10 @@ pub struct CursorSessionOverview {
     pub detail: String,
     pub launch_path: Option<String>,
     pub processes: Vec<CursorProcess>,
+    pub chats: Vec<StuckChat>,
+    pub stuck_chat_count: u32,
+    pub chat_error: Option<String>,
+    pub chat_backup_path: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -39,7 +44,23 @@ pub struct SessionActionRequest {
 }
 
 pub fn load_cursor_sessions() -> Result<CursorSessionOverview, String> {
-    Ok(summarize(collect_processes()?, cursor_launch_path()))
+    let mut overview = summarize(collect_processes()?, cursor_launch_path());
+    let inspection = chats::inspect_stuck_chats();
+    overview.chats = inspection.chats;
+    overview.stuck_chat_count = overview.chats.iter().filter(|chat| chat.can_detach).count() as u32;
+    overview.chat_error = inspection.error;
+    if overview.stuck_chat_count > 0 {
+        overview.detail = format!(
+            "{}. 另有 {} 条对话被标成 Cloud Agent 且已卡住, 可在 Cursor 退出后解除标记改回本地.",
+            overview.detail, overview.stuck_chat_count
+        );
+    } else if overview.chats.iter().any(|chat| chat.cloud_bound) {
+        overview.detail = format!(
+            "{}. 本机索引里还有对话仍标成 Cloud Agent; 未卡住的先不要改, 以免打断还在跑的云端任务.",
+            overview.detail
+        );
+    }
+    Ok(overview)
 }
 
 pub fn manage_cursor_session(request: SessionActionRequest) -> Result<CursorSessionOverview, String> {
@@ -49,9 +70,29 @@ pub fn manage_cursor_session(request: SessionActionRequest) -> Result<CursorSess
         "kill-tree" => quit_cursor(true)?,
         "kill-remote" => kill_remote_workers()?,
         "start" => start_cursor()?,
+        "detach-chats" => return detach_chats(),
         other => return Err(format!("不支持的会话操作: {other}")),
     }
     load_cursor_sessions()
+}
+
+fn detach_chats() -> Result<CursorSessionOverview, String> {
+    if !collect_processes()?.is_empty() {
+        return Err("请先结束全部 Cursor 进程, 再解除 Cloud Agent 标记. 状态库被占用时改写不会生效".to_string());
+    }
+    let inspection = chats::detach_stuck_chats()?;
+    let mut overview = summarize(collect_processes()?, cursor_launch_path());
+    overview.chats = inspection.chats;
+    overview.stuck_chat_count = overview.chats.iter().filter(|chat| chat.can_detach).count() as u32;
+    overview.chat_error = inspection.error;
+    overview.chat_backup_path = inspection.backup_path;
+    if overview.chat_backup_path.is_some() {
+        overview.detail = format!(
+            "已把卡住的对话改回本地索引, 并备份状态库到 {}. 请重新打开同一工作区; 原对话可继续, 不会自动恢复成远程控制.",
+            overview.chat_backup_path.as_deref().unwrap_or("--")
+        );
+    }
+    Ok(overview)
 }
 
 fn summarize(mut processes: Vec<CursorProcess>, launch_path: Option<PathBuf>) -> CursorSessionOverview {
@@ -100,6 +141,10 @@ fn summarize(mut processes: Vec<CursorProcess>, launch_path: Option<PathBuf>) ->
         detail,
         launch_path: launch_path.map(|path| path.to_string_lossy().into_owned()),
         processes,
+        chats: Vec::new(),
+        stuck_chat_count: 0,
+        chat_error: None,
+        chat_backup_path: None,
     }
 }
 
@@ -530,6 +575,7 @@ mod tests {
         assert!(overview.remote_control_running);
         assert_eq!(overview.status, "远程控制占用");
         assert_eq!(overview.processes[0].role, "remote-control");
+        assert!(overview.chats.is_empty());
     }
 
     #[test]

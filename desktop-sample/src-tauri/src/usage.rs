@@ -114,7 +114,7 @@ pub fn load_cursor_usage() -> Result<UsageOverview, String> {
     Ok(overview)
 }
 
-fn cursor_state_db_path() -> PathBuf {
+pub(crate) fn cursor_state_db_path() -> PathBuf {
     cursor_user_data_root()
         .join("Cursor")
         .join("User")

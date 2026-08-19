@@ -87,6 +87,8 @@ test('desktop UI exposes usage and backup history controls', () => {
     'sessionProcessList',
     'sessionConsentCheckbox',
     'sessionKillRemoteButton',
+    'sessionDetachChatsButton',
+    'sessionChatList',
     'backupHistoryList',
     'restoreConsentCheckbox',
     'backupRestoreProgress',
@@ -98,6 +100,7 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(script, /invoke\("cursor_usage"\)/);
   assert.match(script, /invoke\("cursor_sessions"\)/);
   assert.match(script, /invoke\("manage_cursor_session"/);
+  assert.match(script, /detach-chats/);
   assert.match(script, /function renderSessions\(/);
   assert.match(script, /data-usage-tab/);
   assert.match(desktopMain, /mod sessions;/);
@@ -105,11 +108,16 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(desktopMain, /manage_cursor_session,/);
   const usageRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'usage.rs'), 'utf8');
   const sessionsRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'sessions.rs'), 'utf8');
+  const chatsRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'chats.rs'), 'utf8');
   assert.match(usageRs, /api\/dashboard\/get-filtered-usage-events/);
   assert.match(usageRs, /Origin.*cursor\.com/);
   assert.match(usageRs, /fn classify_pool/);
   assert.match(sessionsRs, /kill-remote/);
   assert.match(sessionsRs, /remote-control/);
+  assert.match(sessionsRs, /detach-chats/);
+  assert.match(chatsRs, /createdFromBackgroundAgent/);
+  assert.match(chatsRs, /isArchived/);
+  assert.match(chatsRs, /fn detach_stuck_chats/);
   assert.match(script, /invoke\("list_backups"\)/);
   assert.match(script, /backupVersion:\s*record\.version/);
   assert.match(script, /function runBackupRestore\(/);
@@ -132,6 +140,7 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(styles, /\.usage-model-row/);
   assert.match(styles, /\.usage-day-row/);
   assert.match(styles, /\.session-process-row/);
+  assert.match(styles, /\.session-chat-row/);
 });
 
 test('desktop UI exposes About, GitHub and optional update checks', () => {
