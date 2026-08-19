@@ -787,6 +787,12 @@ function roleLabel(value) {
   return labels[value] || value || "其他";
 }
 
+function chatStateLabel(chat) {
+  if (!chat?.canDetach) return "仍绑定";
+  if (chat.kind === "misclassified") return "标错";
+  return "卡住";
+}
+
 function formatMemory(kb) {
   const value = Number(kb);
   if (!Number.isFinite(value) || value <= 0) return "--";
@@ -1015,9 +1021,9 @@ function renderSessions(sessions) {
   } else if (sessions.chatBackupPath) {
     chatNote.textContent = `已备份状态库到 ${sessions.chatBackupPath}, 再打开同一工作区即可继续原对话.`;
   } else if (sessions.stuckChatCount) {
-    chatNote.textContent = `有 ${sessions.stuckChatCount} 条已卡住, 需先结束 Cursor 再解除云端标记. 未卡住但仍绑定云端的条目不要动.`;
+    chatNote.textContent = `有 ${sessions.stuckChatCount} 条已标错或卡住, 需先结束 Cursor 再清掉本机云端标记. 还在跑的条目不要动.`;
   } else if (chats.length) {
-    chatNote.textContent = "这些对话仍标成 Cloud Agent, 但还没有归档或中断, 可能是还在跑的云端任务.";
+    chatNote.textContent = "这些对话仍标成 Cloud Agent, 且云端任务还在跑或可继续跟进. 杀进程修不好标记, 此时也不要改.";
   } else {
     chatNote.textContent = "没有发现被标成 Cloud Agent 的对话.";
   }
@@ -1038,7 +1044,7 @@ function renderSessions(sessions) {
       const values = row.querySelectorAll("span");
       values[0].textContent = chat.workspace || "--";
       values[0].title = chat.workspace || "";
-      values[1].textContent = chat.canDetach ? "卡住" : "仍绑定";
+      values[1].textContent = chatStateLabel(chat);
       values[2].textContent = chat.reason || "";
       values[2].title = chat.reason || "";
       chatList.appendChild(row);
@@ -1092,7 +1098,7 @@ async function runSessionAction(action) {
       quit: "已请求退出 Cursor",
       "kill-tree": "已结束 Cursor 进程树",
       "kill-remote": "已结束远程控制工作进程",
-      "detach-chats": "已把卡住的对话改回本地索引",
+      "detach-chats": "已把标错或卡住的对话改回本地索引",
       start: "已启动 Cursor",
     };
     addLog("DONE", labels[action] || "会话操作已完成.");

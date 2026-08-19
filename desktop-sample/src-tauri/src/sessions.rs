@@ -51,12 +51,12 @@ pub fn load_cursor_sessions() -> Result<CursorSessionOverview, String> {
     overview.chat_error = inspection.error;
     if overview.stuck_chat_count > 0 {
         overview.detail = format!(
-            "{}. 另有 {} 条对话被标成 Cloud Agent 且已卡住, 可在 Cursor 退出后解除标记改回本地.",
+            "{}. 另有 {} 条对话被标成 Cloud Agent 且已卡住或标错, 可在 Cursor 退出后解除标记改回本地.",
             overview.detail, overview.stuck_chat_count
         );
     } else if overview.chats.iter().any(|chat| chat.cloud_bound) {
         overview.detail = format!(
-            "{}. 本机索引里还有对话仍标成 Cloud Agent; 未卡住的先不要改, 以免打断还在跑的云端任务.",
+            "{}. 本机索引里还有对话仍标成 Cloud Agent; 还在跑的云端任务先不要改.",
             overview.detail
         );
     }
@@ -88,7 +88,7 @@ fn detach_chats() -> Result<CursorSessionOverview, String> {
     overview.chat_backup_path = inspection.backup_path;
     if overview.chat_backup_path.is_some() {
         overview.detail = format!(
-            "已把卡住的对话改回本地索引, 并备份状态库到 {}. 请重新打开同一工作区; 原对话可继续, 不会自动恢复成远程控制.",
+            "已把标错或卡住的对话改回本地索引, 并备份状态库到 {}. 请重新打开同一工作区; 原对话可继续, 不会自动恢复成远程控制.",
             overview.chat_backup_path.as_deref().unwrap_or("--")
         );
     }

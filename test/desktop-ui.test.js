@@ -118,6 +118,9 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(chatsRs, /createdFromBackgroundAgent/);
   assert.match(chatsRs, /isArchived/);
   assert.match(chatsRs, /fn detach_stuck_chats/);
+  assert.match(chatsRs, /misclassified/);
+  assert.match(chatsRs, /fn is_live_status/);
+  assert.match(script, /function chatStateLabel\(/);
   assert.match(script, /invoke\("list_backups"\)/);
   assert.match(script, /backupVersion:\s*record\.version/);
   assert.match(script, /function runBackupRestore\(/);

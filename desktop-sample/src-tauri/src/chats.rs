@@ -87,7 +87,7 @@ fn detach_stuck_chats_at(path: &Path) -> Result<Vec<StuckChat>, String> {
         .filter(|chat| chat.can_detach)
         .collect::<Vec<_>>();
     if stuck.is_empty() {
-        return Err("没有发现需要改回本地的卡住对话. 仍绑定云端但未归档的对话请先在 Cursor 里结束或归档".to_string());
+        return Err("没有发现需要改回本地的对话. 还在跑的云端任务不会改; 若只是标错, 等云端结束后再解除".to_string());
     }
     let ids = stuck
         .iter()
@@ -121,22 +121,19 @@ fn collect_stuck_chats(connection: &Connection) -> Result<Vec<StuckChat>, String
     if headers.is_empty() {
         headers = composers_from_item(connection, "composer.composerData")?;
     }
-    let cloud_ids = cloud_repository_ids(connection)?;
+    let cloud = cloud_repository_index(connection)?;
     let mut by_id = HashMap::<String, (Value, Option<StuckChat>)>::new();
     for header in headers {
         let Some(id) = header.get("composerId").and_then(Value::as_str).map(str::to_string) else {
             continue;
         };
-        let classified = classify_chat(&header, None, &cloud_ids);
+        let classified = classify_chat(&header, None, &cloud);
         by_id.insert(id, (header, classified));
     }
     if table_exists(connection, "cursorDiskKV")? {
         for (id, (header, classified)) in &mut by_id {
-            if classified.is_none() {
-                continue;
-            }
             if let Some(data) = read_composer_data(connection, id)? {
-                *classified = classify_chat(header, Some(&data), &cloud_ids);
+                *classified = classify_chat(header, Some(&data), &cloud);
             }
         }
     }
@@ -154,7 +151,7 @@ fn collect_stuck_chats(connection: &Connection) -> Result<Vec<StuckChat>, String
     Ok(chats)
 }
 
-fn classify_chat(header: &Value, data: Option<&Value>, cloud_ids: &HashSet<String>) -> Option<StuckChat> {
+fn classify_chat(header: &Value, data: Option<&Value>, cloud: &CloudIndex) -> Option<StuckChat> {
     let composer_id = header
         .get("composerId")
         .and_then(Value::as_str)
@@ -166,34 +163,46 @@ fn classify_chat(header: &Value, data: Option<&Value>, cloud_ids: &HashSet<Strin
         .unwrap_or(false);
     let bc_id = first_text(header, data, &["bcId", "bcID", "backgroundComposerId", "cloudAgentId", "cloudAgentBcId"]);
     let status = first_text(header, data, &["status"]).unwrap_or_else(|| "unknown".to_string());
-    let in_cloud_repo = cloud_ids.contains(&composer_id)
+    let in_cloud_repo = cloud.contains(&composer_id)
         || bc_id
             .as_deref()
-            .is_some_and(|id| cloud_ids.contains(id) || cloud_ids.contains(&format!("bc-{composer_id}")));
+            .is_some_and(|id| cloud.contains(id) || cloud.contains(&format!("bc-{composer_id}")));
+    let cloud_status = bc_id
+        .as_deref()
+        .and_then(|id| cloud.status_of(id))
+        .or_else(|| cloud.status_of(&composer_id))
+        .or_else(|| cloud.status_of(&format!("bc-{composer_id}")));
     let flagged = created_from_background || bc_id.is_some();
     if !flagged && !in_cloud_repo {
         return None;
     }
     let stuck_status = is_stuck_status(&status);
-    let can_detach = archived || stuck_status;
+    let cloud_stuck = cloud_status.is_some_and(is_stuck_status);
+    let live = is_live_status(&status) || cloud_status.is_some_and(is_live_status);
+    let can_detach = !live && (flagged || archived || stuck_status || cloud_stuck);
     if !flagged && !can_detach {
         return None;
     }
     let cloud_bound = true;
-    let (kind, reason) = if archived && cloud_bound {
+    let (kind, reason) = if live {
+        (
+            "cloud-bound",
+            "索引仍标成 Cloud Agent / 远程控制会话, 且云端任务还在跑或可继续跟进. 杀进程修不好这条标记; 还在跑时不要改.",
+        )
+    } else if archived {
         (
             "stuck-archived",
             "远程控制或 Cloud Agent 交接后被归档, 本机仍把它当成云端会话, 继续对话会报 Background composer is archived.",
         )
-    } else if stuck_status {
+    } else if stuck_status || cloud_stuck {
         (
             "stuck-status",
-            "对话仍绑着云端 Agent, 状态已中断或失败, 本机侧栏会显示 Running in cloud.",
+            "对话仍绑着云端 Agent, 状态已中断或失败, 本机侧栏会显示 Running in cloud. 杀进程清不掉这个标记.",
         )
     } else {
         (
-            "cloud-bound",
-            "索引仍标成 Cloud Agent / 远程控制会话. 若这是还在跑的云端任务, 不要改; 若只是标错, 先在 Cursor 里结束或归档后再解除.",
+            "misclassified",
+            "本机把这条对话标成 Cloud Agent, 但云端任务已不在跑. 这是本地会话状态, 杀进程修不好, 清掉标记后可当普通对话继续.",
         )
     };
     Some(StuckChat {
@@ -227,39 +236,66 @@ fn composers_from_value(value: &Value) -> Vec<Value> {
         .collect()
 }
 
-fn cloud_repository_ids(connection: &Connection) -> Result<HashSet<String>, String> {
+#[derive(Default)]
+struct CloudIndex {
+    ids: HashSet<String>,
+    status_by_id: HashMap<String, String>,
+}
+
+impl CloudIndex {
+    fn contains(&self, id: &str) -> bool {
+        self.ids.contains(id)
+    }
+
+    fn status_of(&self, id: &str) -> Option<&str> {
+        self.status_by_id.get(id).map(String::as_str)
+    }
+
+    fn record(&mut self, id: &str, status: Option<&str>) {
+        self.ids.insert(id.to_string());
+        if let Some(stripped) = id.strip_prefix("bc-") {
+            self.ids.insert(stripped.to_string());
+        }
+        if let Some(status) = status.filter(|value| !value.is_empty()) {
+            self.status_by_id.insert(id.to_string(), status.to_string());
+            if let Some(stripped) = id.strip_prefix("bc-") {
+                self.status_by_id.insert(stripped.to_string(), status.to_string());
+            }
+        }
+    }
+}
+
+fn cloud_repository_index(connection: &Connection) -> Result<CloudIndex, String> {
     let mut statement = connection
         .prepare("SELECT key, value FROM ItemTable WHERE key LIKE 'cloudAgentRepository%' LIMIT 40")
         .map_err(|error| format!("读取云端 Agent 仓库失败: {error}"))?;
     let rows = statement
         .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
         .map_err(|error| format!("读取云端 Agent 仓库失败: {error}"))?;
-    let mut ids = HashSet::new();
+    let mut index = CloudIndex::default();
     for row in rows {
         let (_, value) = row.map_err(|error| format!("读取云端 Agent 仓库失败: {error}"))?;
-        harvest_cloud_ids(&parse_json_value(&value), &mut ids);
+        harvest_cloud_ids(&parse_json_value(&value), &mut index);
     }
-    Ok(ids)
+    Ok(index)
 }
 
-fn harvest_cloud_ids(value: &Value, ids: &mut HashSet<String>) {
+fn harvest_cloud_ids(value: &Value, index: &mut CloudIndex) {
     match value {
         Value::Object(map) => {
+            let status = map.get("status").and_then(Value::as_str);
             for key in ["composerId", "bcId", "bcID", "id", "backgroundComposerId"] {
                 if let Some(id) = map.get(key).and_then(Value::as_str) {
-                    ids.insert(id.to_string());
-                    if let Some(stripped) = id.strip_prefix("bc-") {
-                        ids.insert(stripped.to_string());
-                    }
+                    index.record(id, status);
                 }
             }
             for nested in map.values() {
-                harvest_cloud_ids(nested, ids);
+                harvest_cloud_ids(nested, index);
             }
         }
         Value::Array(items) => {
             for nested in items {
-                harvest_cloud_ids(nested, ids);
+                harvest_cloud_ids(nested, index);
             }
         }
         _ => {}
@@ -437,10 +473,34 @@ fn truthy(value: Option<&Value>) -> Option<bool> {
     })
 }
 
+fn normalize_status(status: &str) -> String {
+    status
+        .trim()
+        .to_ascii_lowercase()
+        .replace('-', "_")
+        .replace(' ', "_")
+}
+
 fn is_stuck_status(status: &str) -> bool {
     matches!(
-        status.to_ascii_lowercase().as_str(),
+        normalize_status(status).as_str(),
         "aborted" | "error" | "failed" | "archived" | "expired"
+    )
+}
+
+fn is_live_status(status: &str) -> bool {
+    matches!(
+        normalize_status(status).as_str(),
+        "running"
+            | "idle"
+            | "generating"
+            | "in_progress"
+            | "inprogress"
+            | "not_yet_started"
+            | "notyetstarted"
+            | "waiting_for_background_work"
+            | "waiting"
+            | "active"
     )
 }
 
@@ -485,7 +545,7 @@ mod tests {
             "createdFromBackgroundAgent": true,
             "workspaceIdentifier": { "uri": { "fsPath": "D:/work/demo" } }
         });
-        let chat = classify_chat(&header, None, &HashSet::new()).unwrap();
+        let chat = classify_chat(&header, None, &CloudIndex::default()).unwrap();
         assert!(chat.can_detach);
         assert_eq!(chat.kind, "stuck-archived");
         assert_eq!(chat.workspace, "D:/work/demo");
@@ -497,11 +557,42 @@ mod tests {
             "composerId": "live-1",
             "name": "还在跑的云端任务",
             "createdFromBackgroundAgent": true,
-            "isArchived": false
+            "isArchived": false,
+            "bcId": "bc-live-1"
         });
-        let chat = classify_chat(&header, Some(&json!({"status":"completed"})), &HashSet::new()).unwrap();
+        let mut cloud = CloudIndex::default();
+        cloud.record("bc-live-1", Some("RUNNING"));
+        let chat = classify_chat(&header, Some(&json!({"status":"completed"})), &cloud).unwrap();
         assert!(!chat.can_detach);
         assert_eq!(chat.kind, "cloud-bound");
+    }
+
+    #[test]
+    fn wrongly_marked_finished_chat_is_detachable() {
+        let header = json!({
+            "composerId": "wrong-1",
+            "name": "被标错的对话",
+            "createdFromBackgroundAgent": true,
+            "isArchived": false,
+            "bcId": "bc-wrong-1"
+        });
+        let chat = classify_chat(&header, Some(&json!({"status":"completed"})), &CloudIndex::default()).unwrap();
+        assert!(chat.can_detach);
+        assert_eq!(chat.kind, "misclassified");
+    }
+
+    #[test]
+    fn finds_cloud_flags_only_in_composer_data() {
+        let connection = Connection::open_in_memory().unwrap();
+        seed(
+            &connection,
+            json!({"allComposers":[{"composerId":"data-1","name":"只在状态里带标记"}]}),
+            json!({"composerId":"data-1","status":"completed","createdFromBackgroundAgent":true}),
+        );
+        let chats = collect_stuck_chats(&connection).unwrap();
+        assert_eq!(chats.len(), 1);
+        assert_eq!(chats[0].kind, "misclassified");
+        assert!(chats[0].can_detach);
     }
 
     #[test]
@@ -511,7 +602,7 @@ mod tests {
             "name": "普通对话",
             "isArchived": false
         });
-        assert!(classify_chat(&header, None, &HashSet::new()).is_none());
+        assert!(classify_chat(&header, None, &CloudIndex::default()).is_none());
     }
 
     #[test]

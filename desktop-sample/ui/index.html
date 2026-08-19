@@ -277,7 +277,7 @@
             <div class="section-heading usage-heading">
               <div>
                 <h2>Cursor 会话与进程</h2>
-                <p>查看本机进程占用, 以及被错误标成 Cloud Agent 的对话. 解除标记只改本地索引, 不会恢复远程控制.</p>
+                <p>查看本机进程占用, 以及被错误标成 Cloud Agent 的对话. 杀进程修不好这个标记; 解除只改本地索引, 不会恢复远程控制.</p>
               </div>
               <button id="refreshSessionsButton" class="secondary-button"><span>↻</span>刷新会话</button>
             </div>
@@ -310,7 +310,7 @@
                 <button id="sessionKillRemoteButton" class="secondary-button" disabled>结束远程控制工作进程</button>
                 <button id="sessionQuitButton" class="secondary-button" disabled>退出 Cursor</button>
                 <button id="sessionKillTreeButton" class="danger-button" disabled>结束全部进程</button>
-                <button id="sessionDetachChatsButton" class="secondary-button" disabled>把卡住的对话改回本地</button>
+                <button id="sessionDetachChatsButton" class="secondary-button" disabled>把标错或卡住的对话改回本地</button>
                 <button id="sessionStartButton" class="primary-button" disabled>启动 Cursor</button>
               </div>
               <article class="usage-model-card">
@@ -329,7 +329,7 @@
                 <div class="usage-model-heading">
                   <div>
                     <h3>标成 Cloud Agent 的对话</h3>
-                    <p>只读本机对话索引的标题和工作区, 不读取消息正文. 卡住的条目可在 Cursor 退出后解除云端标记.</p>
+                    <p>只读本机对话索引的标题和工作区, 不读取消息正文. 标错或已结束的条目可在 Cursor 退出后解除云端标记.</p>
                   </div>
                   <span id="sessionChatCount">0 条</span>
                 </div>
