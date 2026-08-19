@@ -41,6 +41,8 @@ pub struct CursorSessionOverview {
 #[serde(rename_all = "camelCase")]
 pub struct SessionActionRequest {
     pub action: String,
+    #[serde(default)]
+    pub confirm: bool,
 }
 
 pub fn load_cursor_sessions() -> Result<CursorSessionOverview, String> {
@@ -66,11 +68,19 @@ pub fn load_cursor_sessions() -> Result<CursorSessionOverview, String> {
 pub fn manage_cursor_session(request: SessionActionRequest) -> Result<CursorSessionOverview, String> {
     match request.action.as_str() {
         "refresh" => {}
-        "quit" => quit_cursor(false)?,
-        "kill-tree" => quit_cursor(true)?,
-        "kill-remote" => kill_remote_workers()?,
         "start" => start_cursor()?,
-        "detach-chats" => return detach_chats(),
+        "quit" | "kill-tree" | "kill-remote" | "detach-chats" => {
+            if !request.confirm {
+                return Err("请先确认已保存 Cursor 中的工作, 再执行会话操作".to_string());
+            }
+            match request.action.as_str() {
+                "quit" => quit_cursor(false)?,
+                "kill-tree" => quit_cursor(true)?,
+                "kill-remote" => kill_remote_workers()?,
+                "detach-chats" => return detach_chats(),
+                _ => {}
+            }
+        }
         other => return Err(format!("不支持的会话操作: {other}")),
     }
     load_cursor_sessions()
@@ -165,11 +175,11 @@ fn classify_role(name: &str, command: &str) -> &'static str {
     if hay.contains("remote-control")
         || hay.contains("remote_control")
         || hay.contains("remote control")
-        || hay.contains("cursor-agent")
-        || hay.contains("cloud-agent")
-        || hay.contains("self-hosted")
-        || hay.contains("background composer")
-        || hay.contains("background-composer")
+        || (hay.contains("cursor-agent")
+            && (hay.contains("remote")
+                || hay.contains("cloud")
+                || hay.contains("self-hosted")
+                || hay.contains("background")))
     {
         return "remote-control";
     }
@@ -199,9 +209,32 @@ fn process_name_is_main(name: &str) -> bool {
     stem.eq_ignore_ascii_case("cursor")
 }
 
-fn is_cursor_process(name: &str, command: &str) -> bool {
+fn is_workbench_process(name: &str, command: &str) -> bool {
     let hay = format!("{name} {command}").to_ascii_lowercase();
-    hay.contains("cursor") || hay.contains("cursor-agent")
+    hay.contains("i18n-workbench")
+        || hay.contains("i18nworkbench")
+        || hay.contains("cursor-i18n")
+        || hay.contains("汉化工作台")
+}
+
+fn is_cursor_process(name: &str, command: &str) -> bool {
+    if is_workbench_process(name, command) {
+        return false;
+    }
+    let name = name.to_ascii_lowercase();
+    let command = command.to_ascii_lowercase();
+    let stem = Path::new(name.trim_end_matches(".exe"))
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or(name.as_str());
+    stem == "cursor"
+        || stem.starts_with("cursor helper")
+        || name.starts_with("cursor helper")
+        || name.contains("cursor-agent")
+        || command.contains("cursor-agent")
+        || command.contains("cursor.app/")
+        || command.contains("programs/cursor/")
+        || command.contains("\\cursor\\cursor.exe")
 }
 
 fn collect_processes() -> Result<Vec<CursorProcess>, String> {
@@ -546,6 +579,15 @@ mod tests {
         );
         assert_eq!(classify_role("Cursor Helper (GPU)", ""), "gpu");
         assert_eq!(classify_role("Cursor.exe", "C:\\Users\\li\\AppData\\Local\\Programs\\Cursor\\Cursor.exe"), "main");
+        assert_eq!(classify_role("cursor-agent", "cursor-agent serve"), "other");
+    }
+
+    #[test]
+    fn ignores_workbench_and_keeps_cursor_helpers() {
+        assert!(!is_cursor_process("汉化工作台.exe", r"C:\Users\li\AppData\Local\I18nWorkbench\汉化工作台.exe"));
+        assert!(!is_cursor_process("i18n-workbench", "/Applications/汉化工作台.app/Contents/MacOS/i18n-workbench"));
+        assert!(is_cursor_process("Cursor.exe", r"C:\Users\li\AppData\Local\Programs\Cursor\Cursor.exe"));
+        assert!(is_cursor_process("Cursor Helper (GPU)", ""));
     }
 
     #[test]

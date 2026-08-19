@@ -104,7 +104,8 @@ pub fn load_cursor_usage() -> Result<UsageOverview, String> {
             .header("Accept", "application/json")
             .header("Authorization", &authorization),
         "模型用量",
-    )?;
+    )
+    .unwrap_or_else(|_| json!({}));
 
     let mut overview = parse_usage(credentials.email, &summary, &model_usage)?;
     match load_usage_events(&agent, &cookie, &overview) {
@@ -394,9 +395,9 @@ fn attach_events(overview: &mut UsageOverview, mut events: Vec<UsageEvent>, tota
         .filter(|event| event.pool == "api")
         .map(|event| event.tokens)
         .sum();
-    if !events.is_empty() {
+    if !events.is_empty() && !overview.event_truncated {
         overview.request_total = events.len() as u64;
-        overview.token_total = overview.plan_tokens + overview.api_tokens;
+        overview.token_total = events.iter().map(|event| event.tokens).sum();
         overview.models = models_from_events(&events);
     }
     overview.days = days_from_events(&events);
@@ -455,7 +456,7 @@ fn classify_pool(kind: &str, usage_based_costs: Option<&str>) -> &'static str {
     if usage_based_costs.is_some_and(has_usage_based_charge) {
         return "api";
     }
-    "plan"
+    "unknown"
 }
 
 fn has_usage_based_charge(value: &str) -> bool {
@@ -495,7 +496,7 @@ fn models_from_events(events: &[UsageEvent]) -> Vec<ModelUsage> {
         entry.tokens += event.tokens;
         if event.pool == "api" {
             entry.api_tokens += event.tokens;
-        } else {
+        } else if event.pool == "plan" {
             entry.plan_tokens += event.tokens;
         }
     }
@@ -525,7 +526,7 @@ fn days_from_events(events: &[UsageEvent]) -> Vec<DailyUsage> {
         if event.pool == "api" {
             entry.api_requests += 1;
             entry.api_tokens += event.tokens;
-        } else {
+        } else if event.pool == "plan" {
             entry.plan_requests += 1;
             entry.plan_tokens += event.tokens;
         }
@@ -703,6 +704,54 @@ mod tests {
         assert_eq!(days.len(), 2);
         assert_eq!(days[0].api_requests, 1);
         assert_eq!(days[1].plan_tokens, 35);
+    }
+
+    #[test]
+    fn unknown_event_kind_is_not_counted_as_plan() {
+        assert_eq!(classify_pool("", None), "unknown");
+        assert_eq!(classify_pool("USAGE_EVENT_KIND_CUSTOM", Some("$1.25")), "api");
+        let events = parse_usage_events(&serde_json::json!({
+            "usageEventsDisplay": [{
+                "timestamp": "1751414400000",
+                "model": "mystery",
+                "kind": "USAGE_EVENT_KIND_CUSTOM",
+                "tokenUsage": { "inputTokens": 4, "outputTokens": 6 }
+            }]
+        }));
+        assert_eq!(events[0].pool, "unknown");
+        let days = days_from_events(&events);
+        assert_eq!(days[0].plan_requests, 0);
+        assert_eq!(days[0].api_requests, 0);
+    }
+
+    #[test]
+    fn truncated_events_keep_cycle_model_totals() {
+        let summary = serde_json::json!({
+            "membershipType": "pro",
+            "individualUsage": { "plan": { "used": 1, "limit": 10, "remaining": 9, "totalPercentUsed": 10, "apiPercentUsed": 0 } }
+        });
+        let models = serde_json::json!({
+            "gpt-test": {"numRequests": 12, "maxRequestUsage": 100, "numTokens": 3456}
+        });
+        let mut usage = parse_usage(None, &summary, &models).unwrap();
+        attach_events(
+            &mut usage,
+            vec![UsageEvent {
+                timestamp_ms: 1_751_414_400_000,
+                model: "partial".into(),
+                pool: "plan".into(),
+                kind: "INCLUDED".into(),
+                tokens: 9,
+                charged_cents: 0.0,
+                is_headless: false,
+            }],
+            900,
+        );
+        assert!(usage.event_truncated);
+        assert_eq!(usage.request_total, 12);
+        assert_eq!(usage.token_total, 3456);
+        assert_eq!(usage.models[0].name, "gpt-test");
+        assert_eq!(usage.days.len(), 1);
     }
 
     #[test]

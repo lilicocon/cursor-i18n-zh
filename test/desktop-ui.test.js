@@ -100,6 +100,8 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(script, /invoke\("cursor_usage"\)/);
   assert.match(script, /invoke\("cursor_sessions"\)/);
   assert.match(script, /invoke\("manage_cursor_session"/);
+  assert.match(script, /confirm: action !== "refresh"/);
+  assert.match(script, /function canUseLocalPrivileges\(/);
   assert.match(script, /detach-chats/);
   assert.match(script, /function renderSessions\(/);
   assert.match(script, /data-usage-tab/);
@@ -120,7 +122,10 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(chatsRs, /fn detach_stuck_chats/);
   assert.match(chatsRs, /misclassified/);
   assert.match(chatsRs, /fn is_live_status/);
+  assert.match(chatsRs, /fn is_finished_status/);
+  assert.match(chatsRs, /fn composer_index_fields/);
   assert.match(script, /function chatStateLabel\(/);
+  assert.match(sessionsRs, /is_workbench_process/);
   assert.match(script, /invoke\("list_backups"\)/);
   assert.match(script, /backupVersion:\s*record\.version/);
   assert.match(script, /function runBackupRestore\(/);
@@ -400,6 +405,8 @@ test('desktop UI gates first launch before local or network initialization', () 
   assert.match(html, /隐私说明/);
   assert.match(script, /i18nWorkbench\.firstRunConsent\.v2/);
   assert.match(script, /if \(!browserPreviewSection\) await waitForFirstRunConsent\(\);\s*await refreshEnvironmentAndApps\(\);/);
+  assert.match(script, /function canUseLocalPrivileges\(/);
+  assert.match(script, /if \(!canUseLocalPrivileges\(\)\) return;/);
   assert.match(script, /get\("preview"\)/);
   assert.match(script, /\["about", "extensions"\]\.includes\(requestedBrowserPreview\)/);
   assert.ok(

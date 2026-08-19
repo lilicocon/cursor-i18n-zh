@@ -147,6 +147,7 @@ function acceptFirstRunConsent() {
 }
 
 function loadGitHubAvatar() {
+  if (!canUseLocalPrivileges()) return;
   const avatar = $("#githubAvatar");
   if (avatar.dataset.loaded === "true") return;
   avatar.dataset.loaded = "true";
@@ -497,6 +498,7 @@ function updateEnvironmentView() {
 }
 
 async function loadEnvironment() {
+  if (!canUseLocalPrivileges()) return;
   if (state.environmentLoading) return;
   state.environmentLoading = true;
   const button = $("#nodeRuntimeRefreshButton");
@@ -540,6 +542,7 @@ async function loadEnvironment() {
 
 async function refreshEnvironmentAndApps() {
   if (state.running || state.environmentLoading) return;
+  if (!canUseLocalPrivileges()) return;
   await loadEnvironment();
   await scanApps();
   loadSessions();
@@ -771,7 +774,13 @@ function formatCents(value) {
 }
 
 function poolLabel(value) {
-  return value === "api" ? "API / 按量" : "套餐内";
+  if (value === "api") return "API / 按量";
+  if (value === "plan") return "套餐内";
+  return "未分类";
+}
+
+function canUseLocalPrivileges() {
+  return hasFirstRunConsent() || Boolean(browserPreviewSection);
 }
 
 function roleLabel(value) {
@@ -851,7 +860,7 @@ function renderUsage(usage) {
     note.textContent = `网页请求记录未同步: ${usage.eventsError}. 概览仍显示周期汇总.`;
     note.classList.remove("hidden");
   } else if (usage.eventTruncated) {
-    note.textContent = `已同步最近 ${formatNumber(usage.events?.length || 0)} 条, 周期内共 ${formatNumber(usage.eventTotal)} 条.`;
+    note.textContent = `已同步最近 ${formatNumber(usage.events?.length || 0)} 条, 周期内共 ${formatNumber(usage.eventTotal)} 条. 概览请求数和模型周期汇总未改写; 按天拆分只覆盖已同步记录.`;
     note.classList.remove("hidden");
   } else {
     note.classList.add("hidden");
@@ -937,6 +946,7 @@ function renderUsage(usage) {
 }
 
 async function loadUsage() {
+  if (!canUseLocalPrivileges()) return;
   if (state.usageLoading) return;
   state.usageLoading = true;
   const button = $("#refreshUsageButton");
@@ -1054,6 +1064,7 @@ function renderSessions(sessions) {
 }
 
 async function loadSessions() {
+  if (!canUseLocalPrivileges()) return;
   if (state.sessionsLoading) return;
   state.sessionsLoading = true;
   const button = $("#refreshSessionsButton");
@@ -1090,7 +1101,7 @@ async function runSessionAction(action) {
   $("#sessionsContent").classList.add("loading");
   try {
     const sessions = invoke
-      ? await invoke("manage_cursor_session", { request: { action } })
+      ? await invoke("manage_cursor_session", { request: { action, confirm: action !== "refresh" } })
       : browserFallbackSessions();
     $("#sessionConsentCheckbox").checked = false;
     renderSessions(sessions);
@@ -1135,6 +1146,7 @@ function renderUpdateStatus(status, notify = false) {
 }
 
 async function loadUpdateStatus({ notify = false } = {}) {
+  if (!canUseLocalPrivileges()) return;
   if (state.updateLoading) return;
   state.updateLoading = true;
   const card = $("#updateStatusCard");
@@ -1362,6 +1374,7 @@ function renderGitHubProjects(projects) {
 }
 
 async function loadGitHubProjects({ force = false } = {}) {
+  if (!canUseLocalPrivileges()) return;
   if (state.githubProjectsLoading || (state.githubProjectsLoaded && !force)) return;
   state.githubProjectsLoading = true;
   const button = $("#refreshProjectsButton");
@@ -2895,6 +2908,7 @@ async function openExtensionLocation(kind) {
 }
 
 async function scanApps() {
+  if (!canUseLocalPrivileges()) return;
   const button = $("#scanButton");
   button.classList.add("scanning");
   button.disabled = true;

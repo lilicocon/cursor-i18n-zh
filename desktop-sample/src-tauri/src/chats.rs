@@ -132,8 +132,12 @@ fn collect_stuck_chats(connection: &Connection) -> Result<Vec<StuckChat>, String
     }
     if table_exists(connection, "cursorDiskKV")? {
         for (id, (header, classified)) in &mut by_id {
+            if classified.is_none() {
+                continue;
+            }
             if let Some(data) = read_composer_data(connection, id)? {
-                *classified = classify_chat(header, Some(&data), &cloud);
+                let meta = composer_index_fields(&data);
+                *classified = classify_chat(header, Some(&meta), &cloud);
             }
         }
     }
@@ -178,8 +182,9 @@ fn classify_chat(header: &Value, data: Option<&Value>, cloud: &CloudIndex) -> Op
     }
     let stuck_status = is_stuck_status(&status);
     let cloud_stuck = cloud_status.is_some_and(is_stuck_status);
+    let finished = is_finished_status(&status);
     let live = is_live_status(&status) || cloud_status.is_some_and(is_live_status);
-    let can_detach = !live && (flagged || archived || stuck_status || cloud_stuck);
+    let can_detach = !live && (archived || stuck_status || cloud_stuck || (flagged && finished));
     if !flagged && !can_detach {
         return None;
     }
@@ -206,7 +211,7 @@ fn classify_chat(header: &Value, data: Option<&Value>, cloud: &CloudIndex) -> Op
         )
     };
     Some(StuckChat {
-        name: first_text(header, data, &["name", "subtitle"]).unwrap_or_else(|| "未命名对话".to_string()),
+        name: first_text(header, data, &["name"]).unwrap_or_else(|| "未命名对话".to_string()),
         workspace: workspace_path(header),
         status,
         kind: kind.to_string(),
@@ -267,7 +272,7 @@ impl CloudIndex {
 
 fn cloud_repository_index(connection: &Connection) -> Result<CloudIndex, String> {
     let mut statement = connection
-        .prepare("SELECT key, value FROM ItemTable WHERE key LIKE 'cloudAgentRepository%' LIMIT 40")
+        .prepare("SELECT key, value FROM ItemTable WHERE key LIKE 'cloudAgentRepository%'")
         .map_err(|error| format!("读取云端 Agent 仓库失败: {error}"))?;
     let rows = statement
         .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
@@ -311,6 +316,33 @@ fn read_item(connection: &Connection, key: &str) -> Result<Option<String>, Strin
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
         Err(error) => Err(format!("读取 Cursor 对话索引失败: {error}")),
     }
+}
+
+fn composer_index_fields(value: &Value) -> Value {
+    let mut fields = serde_json::Map::new();
+    for key in [
+        "composerId",
+        "status",
+        "name",
+        "isArchived",
+        "createdFromBackgroundAgent",
+        "backgroundComposerId",
+        "bcId",
+        "bcID",
+        "cloudAgentId",
+        "cloudAgentBcId",
+        "cloudAgentStatus",
+        "isBackgroundAgent",
+        "createdFromCloudAgent",
+        "runningInCloud",
+        "isCloudAgent",
+        "backgroundAgentId",
+    ] {
+        if let Some(field) = value.get(key).cloned() {
+            fields.insert(key.to_string(), field);
+        }
+    }
+    Value::Object(fields)
 }
 
 fn read_composer_data(connection: &Connection, composer_id: &str) -> Result<Option<Value>, String> {
@@ -488,6 +520,13 @@ fn is_stuck_status(status: &str) -> bool {
     )
 }
 
+fn is_finished_status(status: &str) -> bool {
+    matches!(
+        normalize_status(status).as_str(),
+        "completed" | "complete" | "done" | "finished" | "success" | "succeeded"
+    )
+}
+
 fn is_live_status(status: &str) -> bool {
     matches!(
         normalize_status(status).as_str(),
@@ -501,6 +540,11 @@ fn is_live_status(status: &str) -> bool {
             | "waiting_for_background_work"
             | "waiting"
             | "active"
+            | "queued"
+            | "pending"
+            | "starting"
+            | "provisioning"
+            | "installing"
     )
 }
 
@@ -582,17 +626,28 @@ mod tests {
     }
 
     #[test]
-    fn finds_cloud_flags_only_in_composer_data() {
+    fn unknown_status_stays_bound_until_finished() {
+        let header = json!({
+            "composerId": "maybe-1",
+            "name": "状态不明",
+            "createdFromBackgroundAgent": true,
+            "isArchived": false,
+            "bcId": "bc-maybe-1"
+        });
+        let chat = classify_chat(&header, None, &CloudIndex::default()).unwrap();
+        assert!(!chat.can_detach);
+        assert_eq!(chat.kind, "cloud-bound");
+    }
+
+    #[test]
+    fn does_not_scan_unflagged_composer_documents() {
         let connection = Connection::open_in_memory().unwrap();
         seed(
             &connection,
-            json!({"allComposers":[{"composerId":"data-1","name":"只在状态里带标记"}]}),
-            json!({"composerId":"data-1","status":"completed","createdFromBackgroundAgent":true}),
+            json!({"allComposers":[{"composerId":"data-1","name":"普通对话"}]}),
+            json!({"composerId":"data-1","status":"completed","createdFromBackgroundAgent":true,"conversation":[{"text":"secret"}]}),
         );
-        let chats = collect_stuck_chats(&connection).unwrap();
-        assert_eq!(chats.len(), 1);
-        assert_eq!(chats[0].kind, "misclassified");
-        assert!(chats[0].can_detach);
+        assert!(collect_stuck_chats(&connection).unwrap().is_empty());
     }
 
     #[test]
