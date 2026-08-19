@@ -52,7 +52,10 @@ function evaluateCompatibility(patchReport, baseline) {
     errors.push(`工作台入口包仅 ${workbenchBundles} 个, 少于要求的 ${minWorkbenchBundles} 个`);
   }
   if (accountUsageBundles < minAccountUsageBundles) {
-    errors.push(`Cursor 账号用量入口仅嵌入 ${accountUsageBundles} 个包, 少于要求的 ${minAccountUsageBundles} 个`);
+    const skipped = Array.isArray(patchReport && patchReport.accountUsageSkipped) && patchReport.accountUsageSkipped.length
+      ? ` (${patchReport.accountUsageSkipped.join('; ')})`
+      : '';
+    errors.push(`Cursor 账号用量入口仅嵌入 ${accountUsageBundles} 个包, 少于要求的 ${minAccountUsageBundles} 个${skipped}`);
   }
   if (cursorNlsReplacements < minCursorNlsReplacements) {
     errors.push(`Cursor NLS 替换仅 ${cursorNlsReplacements} 条, 少于要求的 ${minCursorNlsReplacements} 条`);

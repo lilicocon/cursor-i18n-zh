@@ -58,6 +58,9 @@ function main() {
   fs.writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`);
   console.log(`兼容性报告: ${path.relative(ROOT, outputPath)}`);
   console.log(`代码替换: ${evaluation.metrics.codeReplacements}, 工作台入口: ${evaluation.metrics.workbenchBundles}, 账号用量入口: ${evaluation.metrics.accountUsageBundles}, Cursor NLS: ${evaluation.metrics.cursorNlsReplacements}`);
+  if (plan.report.accountUsageSkipped && plan.report.accountUsageSkipped.length) {
+    console.log(`账号用量未嵌入: ${plan.report.accountUsageSkipped.join('; ')}`);
+  }
   if (!evaluation.passed) throw new Error(`Cursor ${ctx.product.version} 未通过自动兼容门禁:\n- ${evaluation.errors.join('\n- ')}`);
   console.log(`Cursor ${ctx.product.version} (${String(ctx.product.commit || '').slice(0, 8)}) 自动兼容门禁通过.`);
 }

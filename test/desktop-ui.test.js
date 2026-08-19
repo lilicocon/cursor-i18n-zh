@@ -537,6 +537,7 @@ test('Cursor compatibility workflow bounds and cleans silent installer execution
   assert.match(cursorCompatWorkflow, /resolve-failure:[\s\S]+needs\.compatibility\.result == 'success'/);
   assert.match(cursorCompatWorkflow, /Close resolved compatibility issue/);
   assert.match(cursorCompatWorkflow, /state_reason: 'completed'/);
+  assert.match(cursorCompatWorkflow, /status === 410/);
 });
 
 test('Cursor macOS compatibility workflow bounds and cleans silent installer execution', () => {
@@ -563,6 +564,7 @@ test('Cursor macOS compatibility workflow bounds and cleans silent installer exe
   assert.match(cursorCompatMacosWorkflow, /Close resolved compatibility issue/);
   assert.match(cursorCompatMacosWorkflow, /macOS 自动兼容构建失败/);
   assert.match(cursorCompatMacosWorkflow, /state_reason: 'completed'/);
+  assert.match(cursorCompatMacosWorkflow, /status === 410/);
   assert.match(cursorReleaseMacos, /darwin-universal/);
   assert.match(cursorReleaseMacos, /downloads\.cursor\.com/);
   assert.match(cursorReleaseMacos, /FORCE_COMPAT_CHECK/);

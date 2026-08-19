@@ -46,3 +46,29 @@ test('account usage embedding is idempotent and ignores unsupported bundles', ()
   assert.equal(unsupported.reason, 'anchors-missing');
   assert.equal(unsupported.text, 'const untouched = true;');
 });
+
+function reactFixture() {
+  return [
+    'function general(){',
+    'const signed=yes?jsx(accountFn,{membershipType:s,rootWorkspace:t}):jsx(signIn,{rootWorkspace:t});',
+    'return jsxs(Page,{title:"General",children:[signed,other]})',
+    '}',
+    'function wrap(e){return jsx(plan$Fn,{legacyScrollGutter:!1})}',
+    'function plan$Fn(e){console.error("[PlanUsageConfig] Failed to fetch hard limit")}',
+    'function accountFn({membershipType:e,rootWorkspace:t}){',
+    'return jsx(Row,{description:"Manage your account and billing",label:"Cursor Account"})',
+    '}',
+  ].join('');
+}
+
+test('embeds Cursor 3.16 React plan usage below the General account section', () => {
+  const result = embedAccountUsage(reactFixture());
+
+  assert.equal(result.injected, true);
+  assert.match(result.text, /title:"General",children:\[signed,yes\?jsx\(wrap,\{i18nAccountUsage:!0\}\):null,other\]/);
+  assert.doesNotThrow(() => new vm.Script(result.text));
+
+  const second = embedAccountUsage(result.text);
+  assert.equal(second.injected, false);
+  assert.equal(second.reason, 'already-present');
+});
