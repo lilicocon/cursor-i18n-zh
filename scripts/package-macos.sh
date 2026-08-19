@@ -5,7 +5,29 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TAURI="$ROOT/desktop-sample/src-tauri"
 DIST="$ROOT/dist"
 VERSION="$(node -p "require('$ROOT/package.json').version")"
-TARGET="universal-apple-darwin"
+ARCH_NAME="${PACKAGE_ARCH:-${1:-}}"
+if [[ -z "$ARCH_NAME" ]]; then
+  case "$(uname -m)" in
+    arm64|aarch64) ARCH_NAME=arm64 ;;
+    *) ARCH_NAME=x64 ;;
+  esac
+fi
+case "$ARCH_NAME" in
+  arm64|aarch64)
+    ARCH_NAME=arm64
+    TARGET="aarch64-apple-darwin"
+    LIPO_ARCH=arm64
+    ;;
+  x64|x86_64|x86)
+    ARCH_NAME=x64
+    TARGET="x86_64-apple-darwin"
+    LIPO_ARCH=x86_64
+    ;;
+  *)
+    echo "Unsupported macOS package arch: $ARCH_NAME (use arm64 or x64)" >&2
+    exit 1
+    ;;
+esac
 ICON_SOURCE="$TAURI/icons/icon.png"
 ICONSET="$TAURI/icons/icon.iconset"
 ICNS="$TAURI/icons/icon.icns"
@@ -21,7 +43,7 @@ iconutil -c icns "$ICONSET" -o "$ICNS"
 rm -rf "$ICONSET"
 
 cd "$TAURI"
-rustup target add aarch64-apple-darwin x86_64-apple-darwin
+rustup target add "$TARGET"
 # The certificate is imported by GitHub Actions. Leaving its base64 payload in
 # Tauri's environment makes the bundler try to import it a second time, and an
 # unset secret is still exposed as an empty variable on unsigned builds.
@@ -48,12 +70,10 @@ if [[ ! -x "$APP_BINARY" ]]; then
   exit 1
 fi
 ARCHS="$(lipo -archs "$APP_BINARY")"
-for arch in arm64 x86_64; do
-  if [[ " $ARCHS " != *" $arch "* ]]; then
-    echo "macOS executable is missing $arch: $ARCHS" >&2
-    exit 1
-  fi
-done
+if [[ "$ARCHS" != "$LIPO_ARCH" ]]; then
+  echo "macOS executable arch is $ARCHS, expected $LIPO_ARCH" >&2
+  exit 1
+fi
 
 rm -rf "$ENGINE"
 mkdir -p "$ENGINE/node_modules" "$ENGINE/licenses/claude-translation-memory"
@@ -83,8 +103,9 @@ else
 fi
 codesign --verify --deep --strict "$APP"
 
-APP_ZIP="$DIST/localization-workbench-v${VERSION}-macos-app.zip"
-DMG="$DIST/localization-workbench-v${VERSION}-macos.dmg"
+APP_ZIP="$DIST/localization-workbench-v${VERSION}-macos-${ARCH_NAME}-app.zip"
+DMG="$DIST/localization-workbench-v${VERSION}-macos-${ARCH_NAME}.dmg"
+SUMS="$DIST/SHA256SUMS-macos-${ARCH_NAME}.txt"
 NOTARY_ZIP="$DIST/.localization-workbench-notary.zip"
 DMG_STAGE="$DIST/.localization-workbench-dmg-stage"
 DMG_MOUNT="$DIST/.localization-workbench-dmg-mount"
@@ -97,7 +118,7 @@ cleanup() {
   rm -f "$NOTARY_ZIP"
 }
 trap cleanup EXIT
-rm -f "$APP_ZIP" "$DMG" "$NOTARY_ZIP"
+rm -f "$APP_ZIP" "$DMG" "$NOTARY_ZIP" "$SUMS"
 rm -rf "$DMG_STAGE" "$DMG_MOUNT"
 
 if [[ -n "${APPLE_ID:-}" && -n "${APPLE_APP_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" && "$SIGNING_IDENTITY" != "-" ]]; then
@@ -131,6 +152,8 @@ if [[ -n "${APPLE_ID:-}" && -n "${APPLE_APP_PASSWORD:-}" && -n "${APPLE_TEAM_ID:
   spctl --assess --type execute --verbose=2 "$APP"
 fi
 
-shasum -a 256 "$APP_ZIP" "$DMG" | sed "s#  $DIST/#  #" > "$DIST/SHA256SUMS-macos.txt"
+shasum -a 256 "$APP_ZIP" "$DMG" | sed "s#  $DIST/#  #" > "$SUMS"
+cp "$SUMS" "$DIST/SHA256SUMS-macos.txt"
 echo "macOS app: $APP_ZIP"
 echo "macOS dmg: $DMG"
+echo "Checksums: $SUMS"

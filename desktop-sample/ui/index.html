@@ -8,6 +8,20 @@
   </head>
   <body>
     <div class="app-shell">
+      <header class="titlebar" id="titlebar">
+        <div class="traffic-lights" role="group" aria-label="窗口控制">
+          <button type="button" id="closeButton" class="traffic-light close" aria-label="关闭"></button>
+          <button type="button" id="minimizeButton" class="traffic-light minimize" aria-label="最小化"></button>
+          <button type="button" id="zoomButton" class="traffic-light zoom" aria-label="缩放"></button>
+        </div>
+        <div class="titlebar-drag" data-tauri-drag-region>
+          <div class="titlebar-heading">汉化工作台</div>
+        </div>
+        <div class="titlebar-status" data-tauri-drag-region>
+          <span class="status-dot"></span>
+          <span id="headerStatus" role="status" aria-live="polite">服务运行正常</span>
+        </div>
+      </header>
       <aside class="sidebar">
         <div class="brand">
             <img class="brand-mark" src="app-icon.png" width="40" height="40" alt="" />
@@ -50,24 +64,12 @@
             <div><strong id="permissionTitle">正在检查权限</strong><small id="permissionText">请稍候...</small></div>
           </div>
           <div class="version-row">
-            <span>双应用工作台</span><span>v0.4.5</span>
+            <span>双应用工作台</span><span>v0.4.6</span>
           </div>
         </div>
       </aside>
 
       <main class="workspace">
-        <header class="titlebar" data-tauri-drag-region>
-          <div class="breadcrumb" data-tauri-drag-region>
-            <span class="status-dot"></span>
-            <span id="headerStatus" role="status" aria-live="polite">服务运行正常</span>
-          </div>
-          <div class="window-controls">
-            <button id="minimizeButton" aria-label="最小化">—</button>
-            <button id="maximizeButton" aria-label="最大化">□</button>
-            <button id="closeButton" class="close" aria-label="关闭">×</button>
-          </div>
-        </header>
-
         <section class="content">
           <div id="overview" class="hero-row scroll-anchor">
             <div>
@@ -139,7 +141,7 @@
               <div class="app-meta stacked-meta">
                 <span id="cursorVersion">版本: 检测中</span>
                 <span id="cursorInstallState">正在定位 resources/app...</span>
-                <span class="adapter-state">适配器 v0.4.5</span>
+                <span class="adapter-state">适配器 v0.4.6</span>
                 <span id="cursorCompatibility" class="compatibility-state">正在检测新版本兼容性</span>
               </div>
               <button class="primary-button configure-button" data-open-app="cursor">配置汉化 <span>→</span></button>
@@ -154,7 +156,7 @@
               <p class="app-description">仅替换 3 个本地英文资源 JSON</p>
               <div class="app-meta stacked-meta">
                 <span id="claudeVersion">版本: 检测中</span>
-                <span id="claudeInstallState">正在定位 WindowsApps 资源...</span>
+                <span id="claudeInstallState">正在查找应用程序…</span>
                 <span class="adapter-state">适配器 v0.1.0</span>
                 <span id="claudeCompatibility" class="compatibility-state">正在检测新版本兼容性</span>
               </div>
@@ -496,7 +498,7 @@
               </div>
               <div class="about-hero-emblem" aria-hidden="true">
                 <strong>译</strong>
-                <span class="about-version-badge">v0.4.5</span>
+                <span class="about-version-badge">v0.4.6</span>
               </div>
             </div>
 
@@ -527,7 +529,7 @@
                   <span id="updateState" class="pill neutral">正在检查</span>
                 </div>
                 <div class="update-version-facts">
-                  <span>当前版本<strong id="updateCurrentVersion">v0.4.5</strong></span>
+                  <span>当前版本<strong id="updateCurrentVersion">v0.4.6</strong></span>
                   <span>最新版本<strong id="updateLatestVersion">--</strong></span>
                 </div>
                 <p id="updateMessage" class="update-message">正在连接 GitHub 检查正式发行版...</p>
@@ -618,8 +620,8 @@
           </div>
 
           <div id="adminNote" class="admin-note hidden">
-            <div><strong id="adminNoteTitle">Claude Desktop 安装需要管理员权限</strong><p id="adminNoteText">WindowsApps 默认受保护. 预检不需要提权, 安装和恢复需要重新启动工作台.</p></div>
-            <button id="restartAdminButton" class="mini-button">管理员重启</button>
+            <div><strong id="adminNoteTitle">Claude Desktop 安装需要授权</strong><p id="adminNoteText">写入「应用程序」需要输入登录密码或使用触控 ID. 预检可在标准用户下完成, 安装和恢复请重新打开并授权.</p></div>
+            <button id="restartAdminButton" class="mini-button">重新打开并授权</button>
           </div>
 
           <label class="consent-row">

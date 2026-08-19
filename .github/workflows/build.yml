@@ -10,7 +10,19 @@ permissions:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            arch: x64
+            rust_target: x86_64-pc-windows-msvc
+            package_cli: true
+          - os: windows-11-arm
+            arch: arm64
+            rust_target: aarch64-pc-windows-msvc
+            package_cli: false
     env:
       WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
       WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
@@ -27,48 +39,58 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: desktop-sample/src-tauri -> target
+          prefix-key: windows-${{ matrix.arch }}
 
       - name: Install dependencies
         run: npm ci
 
       - name: Test
+        if: matrix.package_cli
         run: npm test
 
       - name: Check dictionaries
+        if: matrix.package_cli
         run: npm run dict-check
 
       - name: Scan sensitive information
+        if: matrix.package_cli
         run: npm run security-check
 
       - name: Package Windows helper
         run: npm run package
 
       - name: Test desktop workbench
+        if: matrix.package_cli
         run: cargo test --locked --manifest-path desktop-sample/src-tauri/Cargo.toml
 
       - name: Build desktop workbench
-        run: cargo build --release --locked --manifest-path desktop-sample/src-tauri/Cargo.toml
+        run: cargo build --release --locked --target ${{ matrix.rust_target }} --manifest-path desktop-sample/src-tauri/Cargo.toml
 
       - name: Sign Windows executable
         if: env.WINDOWS_CERTIFICATE != ''
         shell: pwsh
+        env:
+          RUST_TARGET: ${{ matrix.rust_target }}
         run: |
           $certificate = Join-Path $env:RUNNER_TEMP 'windows-signing.pfx'
+          $exe = Join-Path $pwd "desktop-sample\src-tauri\target\$env:RUST_TARGET\release\cursor-i18n-desktop-sample.exe"
           [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
           try {
             $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin' -Recurse -Filter signtool.exe |
-              Where-Object FullName -Match '\\x64\\signtool\.exe$' |
+              Where-Object FullName -Match '\\(x64|arm64)\\signtool\.exe$' |
               Sort-Object FullName -Descending |
               Select-Object -First 1 -ExpandProperty FullName
             if (!$signtool) { throw 'signtool.exe not found' }
-            & $signtool sign /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 'desktop-sample/src-tauri/target/release/cursor-i18n-desktop-sample.exe'
+            & $signtool sign /f $certificate /p $env:WINDOWS_CERTIFICATE_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $exe
             if ($LASTEXITCODE -ne 0) { throw "signtool failed with exit code $LASTEXITCODE" }
-            $signature = Get-AuthenticodeSignature 'desktop-sample/src-tauri/target/release/cursor-i18n-desktop-sample.exe'
+            $signature = Get-AuthenticodeSignature $exe
             if ($signature.Status -ne 'Valid') { throw "Windows signature verification failed: $($signature.Status)" }
           } finally {
             Remove-Item -LiteralPath $certificate -Force -ErrorAction SilentlyContinue
@@ -76,9 +98,10 @@ jobs:
 
       - name: Package desktop workbench
         shell: pwsh
-        run: ./scripts/package-desktop.ps1
+        run: ./scripts/package-desktop.ps1 -Arch ${{ matrix.arch }}
 
       - name: Smoke test package
+        if: matrix.package_cli
         shell: pwsh
         run: |
           $smoke = Join-Path $env:RUNNER_TEMP 'cursor-i18n-zh-smoke'
@@ -90,7 +113,8 @@ jobs:
           if (!(Test-Path -LiteralPath (Join-Path $smoke 'LICENSE'))) { throw 'Missing LICENSE' }
           node (Join-Path $smoke 'src\cli.js') --help
 
-      - name: Upload artifact
+      - name: Upload helper artifact
+        if: matrix.package_cli
         uses: actions/upload-artifact@v6
         with:
           name: cursor-i18n-zh-windows
@@ -99,14 +123,24 @@ jobs:
       - name: Upload desktop artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: localization-workbench-windows
+          name: localization-workbench-windows-${{ matrix.arch }}
           path: |
-            dist/localization-workbench-v*.exe
-            dist/localization-workbench-v*-windows.zip
-            dist/SHA256SUMS.txt
+            dist/localization-workbench-v*-windows-${{ matrix.arch }}.exe
+            dist/localization-workbench-v*-windows-${{ matrix.arch }}.zip
+            dist/SHA256SUMS-windows-${{ matrix.arch }}.txt
 
   macos:
     runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            rust_target: aarch64-apple-darwin
+            run_tests: true
+          - arch: x64
+            rust_target: x86_64-apple-darwin
+            run_tests: false
     env:
       APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
       APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -114,6 +148,7 @@ jobs:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      PACKAGE_ARCH: ${{ matrix.arch }}
 
     steps:
       - name: Checkout
@@ -127,11 +162,14 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: desktop-sample/src-tauri -> target
+          prefix-key: macos-${{ matrix.arch }}
 
       - name: Install dependencies
         run: npm ci
@@ -144,6 +182,7 @@ jobs:
           p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
 
       - name: Test Node.js core
+        if: matrix.run_tests
         shell: bash
         run: |
           set +e
@@ -158,6 +197,7 @@ jobs:
           done
 
       - name: Test Rust core
+        if: matrix.run_tests
         shell: bash
         run: |
           set +e
@@ -191,7 +231,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          CARGO_TERM_COLOR=never bash scripts/package-macos.sh 2>&1 | tee macos-build.log
+          CARGO_TERM_COLOR=never bash scripts/package-macos.sh ${{ matrix.arch }} 2>&1 | tee macos-build.log
           status=${PIPESTATUS[0]}
           if (( status != 0 )); then
             details=$(tail -n 80 macos-build.log | sed 's/%/%25/g; s/\r/%0D/g' | awk 'BEGIN { ORS="%0A" } { print }')
@@ -202,11 +242,11 @@ jobs:
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: localization-workbench-macos
+          name: localization-workbench-macos-${{ matrix.arch }}
           path: |
-            dist/localization-workbench-v*-macos-app.zip
-            dist/localization-workbench-v*-macos.dmg
-            dist/SHA256SUMS-macos.txt
+            dist/localization-workbench-v*-macos-${{ matrix.arch }}-app.zip
+            dist/localization-workbench-v*-macos-${{ matrix.arch }}.dmg
+            dist/SHA256SUMS-macos-${{ matrix.arch }}.txt
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -241,17 +281,40 @@ jobs:
           name: cursor-i18n-zh-windows
           path: dist
 
-      - name: Download desktop artifacts
+      - name: Download Windows x64 artifacts
         uses: actions/download-artifact@v7
         with:
-          name: localization-workbench-windows
+          name: localization-workbench-windows-x64
           path: dist
 
-      - name: Download macOS artifacts
+      - name: Download Windows ARM artifacts
         uses: actions/download-artifact@v7
         with:
-          name: localization-workbench-macos
+          name: localization-workbench-windows-arm64
           path: dist
+
+      - name: Download macOS ARM artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: localization-workbench-macos-arm64
+          path: dist
+
+      - name: Download macOS x64 artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: localization-workbench-macos-x64
+          path: dist
+
+      - name: Merge checksum manifests
+        shell: pwsh
+        run: |
+          $utf8 = [Text.UTF8Encoding]::new($false)
+          $windows = Get-ChildItem dist -Filter 'SHA256SUMS-windows-*.txt' | Sort-Object Name | ForEach-Object { Get-Content -LiteralPath $_.FullName }
+          $macos = Get-ChildItem dist -Filter 'SHA256SUMS-macos-*.txt' | Sort-Object Name | ForEach-Object { Get-Content -LiteralPath $_.FullName }
+          if (!$windows) { throw 'Missing Windows SHA256 manifests' }
+          if (!$macos) { throw 'Missing macOS SHA256 manifests' }
+          [IO.File]::WriteAllLines((Join-Path 'dist' 'SHA256SUMS.txt'), @($windows), $utf8)
+          [IO.File]::WriteAllLines((Join-Path 'dist' 'SHA256SUMS-macos.txt'), @($macos), $utf8)
 
       - name: Publish GitHub Release asset
         uses: softprops/action-gh-release@v2
@@ -260,9 +323,13 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             dist/cursor-i18n-zh-windows.zip
-            dist/localization-workbench-v*.exe
-            dist/localization-workbench-v*-windows.zip
-            dist/localization-workbench-v*-macos-app.zip
-            dist/localization-workbench-v*-macos.dmg
+            dist/localization-workbench-v*-windows-x64.exe
+            dist/localization-workbench-v*-windows-x64.zip
+            dist/localization-workbench-v*-windows-arm64.exe
+            dist/localization-workbench-v*-windows-arm64.zip
+            dist/localization-workbench-v*-macos-arm64-app.zip
+            dist/localization-workbench-v*-macos-arm64.dmg
+            dist/localization-workbench-v*-macos-x64-app.zip
+            dist/localization-workbench-v*-macos-x64.dmg
             dist/SHA256SUMS.txt
             dist/SHA256SUMS-macos.txt

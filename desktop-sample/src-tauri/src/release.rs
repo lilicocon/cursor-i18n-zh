@@ -100,9 +100,15 @@ pub fn download_latest_update(
         return Err("当前没有需要下载的新版本".to_string());
     }
     let asset_name = if cfg!(target_os = "macos") {
-        format!("localization-workbench-v{version}-macos.dmg")
+        if cfg!(target_arch = "aarch64") {
+            format!("localization-workbench-v{version}-macos-arm64.dmg")
+        } else {
+            format!("localization-workbench-v{version}-macos-x64.dmg")
+        }
+    } else if cfg!(target_arch = "aarch64") {
+        format!("localization-workbench-v{version}-windows-arm64.zip")
     } else {
-        format!("localization-workbench-v{version}-windows.zip")
+        format!("localization-workbench-v{version}-windows-x64.zip")
     };
     let checksum_name = if cfg!(target_os = "macos") {
         "SHA256SUMS-macos.txt"

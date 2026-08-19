@@ -240,7 +240,7 @@ jobs:
       - name: Package macOS workbench
         run: |
           set -euo pipefail
-          CARGO_TERM_COLOR=never bash scripts/package-macos.sh 2>&1 | tee macos-compat-build.log
+          CARGO_TERM_COLOR=never bash scripts/package-macos.sh arm64 2>&1 | tee macos-compat-build.log
 
       - name: Upload compatibility reports
         if: always()
@@ -258,8 +258,9 @@ jobs:
         with:
           name: localization-workbench-cursor-${{ needs.detect.outputs.version }}-macos
           path: |
-            dist/localization-workbench-v*-macos-app.zip
-            dist/localization-workbench-v*-macos.dmg
+            dist/localization-workbench-v*-macos-arm64-app.zip
+            dist/localization-workbench-v*-macos-arm64.dmg
+            dist/SHA256SUMS-macos-arm64.txt
             dist/SHA256SUMS-macos.txt
           retention-days: 30
 

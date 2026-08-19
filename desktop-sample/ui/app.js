@@ -262,7 +262,7 @@ function browserFallbackApps() {
   return [
     {
       id: "cursor", name: "Cursor", installed: true, ready: true, path: "浏览器预览模式",
-      version: "preview", state: "适配器可用", stateTone: "success", adapterVersion: "0.4.5",
+      version: "preview", state: "适配器可用", stateTone: "success", adapterVersion: "0.4.6",
       backupAvailable: true, backupPath: "浏览器预览模式\\backup\\preview", backupFiles: 7,
       backupMessage: "浏览器预览样例: 7 个文件已通过完整性校验", localized: false, reason: null,
       autoCompatible: true, compatibilityMessage: "已按资源结构自动适配未来 Cursor 版本, 安装前仍会执行完整语法预检",
@@ -320,13 +320,13 @@ function browserFallbackUsage() {
 
 function browserFallbackUpdateStatus() {
   return {
-    currentVersion: "0.4.5",
-    latestVersion: "0.4.5",
+    currentVersion: "0.4.6",
+    latestVersion: "0.4.6",
     updateAvailable: false,
     currentAhead: false,
     releaseUrl: "https://github.com/lilicocon/cursor-i18n-zh/releases",
     publishedAt: new Date().toISOString(),
-    message: "浏览器预览样例: 当前 v0.4.5 已是最新版本",
+    message: "浏览器预览样例: 当前 v0.4.6 已是最新版本",
   };
 }
 
@@ -412,10 +412,10 @@ function updateEnvironmentView() {
   const elevated = state.environment.isAdmin;
   const mac = state.environment.platform === "macos";
   $("#permissionCard").classList.toggle("elevated", elevated);
-  $("#permissionTitle").textContent = elevated ? "管理员模式" : "标准权限";
+  $("#permissionTitle").textContent = elevated ? "已授权" : "标准用户";
   $("#permissionText").textContent = elevated
-    ? (mac ? "可修改并重签名 Applications" : "可修改 WindowsApps")
-    : "预检可用, Claude 安装需提权";
+    ? (mac ? "可修改并重签名「应用程序」" : "可修改受保护的应用程序目录")
+    : "预检可用, 安装需输入登录密码或使用触控 ID";
   const runtime = state.environment.nodeRuntime || {
     installed: Boolean(state.environment.nodeVersion),
     compatible: Boolean(state.environment.nodeVersion),
@@ -435,7 +435,7 @@ function updateEnvironmentView() {
   $("#nodeRuntimeMessage").textContent = runtime.message;
   $("#nodeRuntimeVersion").textContent = runtime.version ? `v${runtime.version}` : "未检测到";
   $("#nodeRuntimeRequired").textContent = `Node.js ${String(runtime.requiredVersion || ">=18").replace(">=", "")}+`;
-  $("#nodeRuntimePath").textContent = runtime.executable || "PATH 中未找到 node.exe";
+  $("#nodeRuntimePath").textContent = runtime.executable || "PATH 中未找到 node";
   $("#nodeRuntimePath").title = runtime.executable || "";
   $("#engineHint").textContent = runtime.compatible
     ? `Cursor 引擎: Node.js ${runtime.version} 已就绪`
@@ -621,7 +621,7 @@ function backupStatusTone(record) {
 function restoreBlockedReason(record) {
   if (!record.valid) return record.detail || "备份完整性校验失败";
   if (!record.current) return record.detail || "备份版本与当前软件版本不匹配";
-  if (!state.environment.isAdmin && (record.appId === "claude" || state.environment.platform === "macos")) return "恢复应用资源需要管理员权限";
+  if (!state.environment.isAdmin && (record.appId === "claude" || state.environment.platform === "macos")) return "恢复应用资源需要授权";
   if (!$("#restoreConsentCheckbox").checked) return "请先确认已保存工作并同意关闭目标应用";
   return "";
 }
@@ -839,7 +839,7 @@ async function downloadLatestUpdate() {
   try {
     const result = invoke
       ? await invoke("download_latest_update")
-      : { version: "0.4.5", path: "D:\\Downloads\\localization-workbench.zip", sha256: "demo", cached: false };
+      : { version: "0.4.6", path: "D:\\Downloads\\localization-workbench.zip", sha256: "demo", cached: false };
     addLog("DONE", `更新包 v${result.version} ${result.cached ? "已从本地缓存复用" : "已流式下载"}并通过 SHA256 校验: ${result.path}`);
     setUpdateDownloadProgress(100, result.cached ? "本地缓存已通过 SHA256 校验" : "更新包已下载并通过 SHA256 校验", "complete");
     showToast(`更新包 v${result.version} ${result.cached ? "缓存已校验" : "下载已完成"}.`, "success");
@@ -2679,10 +2679,8 @@ function openModal(appId) {
   renderLocales(app);
   const needsAdmin = !state.environment.isAdmin && (appId === "claude" || state.environment.platform === "macos");
   $("#adminNote").classList.toggle("hidden", !needsAdmin);
-  $("#adminNoteTitle").textContent = `${app.name} 安装需要管理员权限`;
-  $("#adminNoteText").textContent = state.environment.platform === "macos"
-    ? "Applications 目录和应用签名受系统保护. 预检不需要提权, 安装和恢复需要输入 Mac 登录密码."
-    : "WindowsApps 默认受保护. 预检不需要提权, 安装和恢复需要重新启动工作台.";
+  $("#adminNoteTitle").textContent = `${app.name} 安装需要授权`;
+  $("#adminNoteText").textContent = "写入「应用程序」或受保护的应用目录需要输入登录密码或使用触控 ID. 预检不需要授权, 安装和恢复请重新打开工作台.";
   $("#consentCheckbox").checked = false;
   $("#progressWrap").classList.add("hidden");
   $("#progressBar").style.width = "0%";
@@ -2864,8 +2862,8 @@ async function runAction(action) {
     $("#operationMessage").textContent = message;
     if (message.includes("管理员身份重新启动汉化工作台")) {
       $("#adminNote").classList.remove("hidden");
-      $("#adminNoteTitle").textContent = "需要管理员权限结束 Cursor";
-      $("#adminNoteText").textContent = "Cursor 进程树已自动清理但仍有受保护进程. 点击管理员重启后再次执行操作.";
+      $("#adminNoteTitle").textContent = "需要授权才能结束 Cursor";
+      $("#adminNoteText").textContent = "Cursor 进程树已自动清理, 仍有受保护进程. 请重新打开并授权后再执行操作.";
     }
     addLog("WARN", `${app.name} 操作失败: ${message}`);
     showToast("操作失败, 请查看运行日志.", "warning");
@@ -3067,23 +3065,58 @@ $("#skillEditorSaveButton").addEventListener("click", saveSkillEditor);
 $("#promptEditorCloseButton").addEventListener("click", closePromptEditor);
 $("#promptEditorCancelButton").addEventListener("click", closePromptEditor);
 $("#promptEditorSaveButton").addEventListener("click", savePromptEditor);
-$("#mcpEditorBackdrop").addEventListener("click", (event) => {
-  if (event.target.id === "mcpEditorBackdrop") closeMcpEditor();
-});
-$("#skillEditorBackdrop").addEventListener("click", (event) => {
-  if (event.target.id === "skillEditorBackdrop") closeSkillEditor();
-});
-$("#promptEditorBackdrop").addEventListener("click", (event) => {
-  if (event.target.id === "promptEditorBackdrop") closePromptEditor();
-});
+function isTypingTarget(node) {
+  if (!node || node === document.body || node === document.documentElement) return false;
+  if (node.isContentEditable) return true;
+  const tag = node.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
+function dismissFrontmostSheet() {
+  if (!$("#promptEditorBackdrop").classList.contains("hidden")) {
+    closePromptEditor();
+    return true;
+  }
+  if (!$("#skillEditorBackdrop").classList.contains("hidden")) {
+    closeSkillEditor();
+    return true;
+  }
+  if (!$("#mcpEditorBackdrop").classList.contains("hidden")) {
+    closeMcpEditor();
+    return true;
+  }
+  if (!$("#modalBackdrop").classList.contains("hidden")) {
+    closeModal();
+    return true;
+  }
+  if (!$("#firstRunBackdrop").classList.contains("hidden")) {
+    closeFirstRunDialog();
+    return true;
+  }
+  return false;
+}
 
 document.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") return;
-  if (!$("#promptEditorBackdrop").classList.contains("hidden")) return closePromptEditor();
-  if (!$("#skillEditorBackdrop").classList.contains("hidden")) return closeSkillEditor();
-  if (!$("#mcpEditorBackdrop").classList.contains("hidden")) return closeMcpEditor();
-  if (!$("#modalBackdrop").classList.contains("hidden")) return closeModal();
-  if (!$("#firstRunBackdrop").classList.contains("hidden")) closeFirstRunDialog();
+  if (event.key === "Escape") {
+    dismissFrontmostSheet();
+    return;
+  }
+  const modifier = event.metaKey || event.ctrlKey;
+  if (!modifier || event.altKey) return;
+  const key = event.key.toLowerCase();
+  if (key === "w") {
+    event.preventDefault();
+    if (!dismissFrontmostSheet()) appWindow?.close();
+    return;
+  }
+  if (isTypingTarget(event.target)) return;
+  if (key === "r") {
+    event.preventDefault();
+    refreshEnvironmentAndApps();
+  } else if (key === "m") {
+    event.preventDefault();
+    appWindow?.minimize();
+  }
 });
 
 $$(`[data-open-app]`).forEach((button) => button.addEventListener("click", () => openModal(button.dataset.openApp)));
@@ -3124,8 +3157,8 @@ $("#restartAdminButton").addEventListener("click", async () => {
   try {
     await invoke("restart_as_admin");
   } catch (error) {
-    addLog("WARN", `管理员重启失败: ${normalizeError(error)}`);
-    showToast("管理员重启失败.", "warning");
+    addLog("WARN", `重新打开并授权失败: ${normalizeError(error)}`);
+    showToast("重新打开并授权失败.", "warning");
   }
 });
 $("#copyLogsButton").addEventListener("click", copyRunLogs);
@@ -3134,8 +3167,9 @@ $("#clearLogButton").addEventListener("click", () => {
   $("#logArea").replaceChildren();
   addLog("INFO", "日志已清空.");
 });
-$("#modalBackdrop").addEventListener("click", (event) => {
-  if (event.target.id === "modalBackdrop") closeModal();
+$("#titlebar").addEventListener("dblclick", (event) => {
+  if (event.target.closest(".traffic-light, .traffic-lights")) return;
+  appWindow?.toggleMaximize();
 });
 $("#githubAvatar").addEventListener("load", () => {
   $("#githubAvatarFallback").hidden = true;
@@ -3151,7 +3185,7 @@ $("#firstRunAcceptButton").addEventListener("click", acceptFirstRunConsent);
 $("#firstRunCloseButton").addEventListener("click", closeFirstRunDialog);
 $("#firstRunExitButton").addEventListener("click", () => appWindow?.close());
 $("#minimizeButton").addEventListener("click", () => appWindow?.minimize());
-$("#maximizeButton").addEventListener("click", () => appWindow?.toggleMaximize());
+$("#zoomButton").addEventListener("click", () => appWindow?.toggleMaximize());
 $("#closeButton").addEventListener("click", () => appWindow?.close());
 
 window.addEventListener("DOMContentLoaded", async () => {

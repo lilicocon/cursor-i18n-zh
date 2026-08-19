@@ -1,4 +1,4 @@
-# 汉化工作台 v0.4.5
+# 汉化工作台 v0.4.6
 
 执行以下约束:
 
@@ -67,7 +67,7 @@ Microsoft 官方 Cursor 中文语言包仅通过 Cursor CLI 按需安装或读�
 
 - 安装 Windows 或 macOS 版 Claude Desktop.
 - 安全预检不需要管理员权限.
-- 安装和恢复 WindowsApps 或 `/Applications/Claude.app` 中的资源时, 使用界面的“管理员重启”按钮.
+- 安装和恢复 WindowsApps 或 `/Applications/Claude.app` 中的资源时, 使用界面的“重新打开并授权”按钮.
 - 设置 `CLAUDE_RESOURCES_DIR` 可指定自定义 `app/resources` 目录.
 - Windows 备份保存到 `%LOCALAPPDATA%\I18nWorkbench`, macOS 保存到 `~/Library/Application Support/I18nWorkbench`.
 - macOS 修改后按嵌套 Mach-O, Framework, Helper App 和外层应用顺序执行本机 ad-hoc 重签名, 保留并复验 Claude 虚拟化 entitlement.
@@ -178,7 +178,7 @@ Microsoft 官方 Cursor 中文语言包仅通过 Cursor CLI 按需安装或读�
 
 ## v0.3.4 更新说明
 
-- 新增 Node.js 运行环境检测卡, 显示安装状态、版本、最低要求和 `node.exe` 路径.
+- 新增 Node.js 运行环境检测卡, 显示安装状态、版本、最低要求和 `node` 路径.
 - 区分未安装、版本低于 18 和已就绪状态, 仅禁用依赖 Node.js 的 Cursor 适配器.
 - “重新扫描”和“重新检测”都会同步刷新 Node.js 状态与 Cursor 可用状态.
 
@@ -220,8 +220,8 @@ npm run package-desktop
 构建结果:
 
 ```text
-src-tauri\target\release\cursor-i18n-desktop-sample.exe
-..\dist\localization-workbench-v0.4.5.exe
-..\dist\localization-workbench-v0.4.5-windows.zip
-..\dist\SHA256SUMS.txt
+src-tauri\target\x86_64-pc-windows-msvc\release\cursor-i18n-desktop-sample.exe
+..\dist\localization-workbench-v0.4.6-windows-x64.exe
+..\dist\localization-workbench-v0.4.6-windows-x64.zip
+..\dist\SHA256SUMS-windows-x64.txt
 ```

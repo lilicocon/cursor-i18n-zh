@@ -139,25 +139,31 @@ app/resources/ion-dist/i18n/dynamic/en-US.json
 - 关于页在下载过程中显示实时进度和当前阶段, 无 Content-Length 时仍显示累计下载 MB 数.
 - GitHub 项目、扩展市场、版本检查和更新下载会对 HTTP 500/502/503/504、超时及短暂连接失败执行有限重试, 403/404 等永久错误不会重复请求.
 - 在独立扩展管理页维护 Cursor 与 Claude Code 的 MCP, Skill 和提示词, 支持用户级与项目级作用域及 GitHub 更新检查.
-- 扩展检查与市场安装显示统一进度反馈, 键盘支持 Esc 关闭弹窗和方向键切换 Tab, 并为焦点和减少动态效果提供无障碍适配.
+- 扩展检查与市场安装显示统一进度反馈; 键盘遵循 macOS 习惯: Esc 关闭面板, ⌘/Ctrl+W 关闭当前面板或窗口, ⌘/Ctrl+R 重新扫描, ⌘/Ctrl+M 最小化, 方向键切换 Tab, 并为焦点和减少动态效果提供无障碍适配.
 
 ## 下载和使用
 
-从 [最新发行版](https://github.com/lilicocon/cursor-i18n-zh/releases/latest) 下载推荐的完整便携包:
+从 [最新发行版](https://github.com/lilicocon/cursor-i18n-zh/releases/latest) 按系统架构下载对应安装包:
 
 ```text
-localization-workbench-v0.4.5-windows.zip
+Windows x86（Intel/AMD 64 位）: localization-workbench-v0.4.6-windows-x64.zip
+Windows ARM:                   localization-workbench-v0.4.6-windows-arm64.zip
+macOS ARM（Apple Silicon）:    localization-workbench-v0.4.6-macos-arm64.dmg
+macOS x86（Intel）:            localization-workbench-v0.4.6-macos-x64.dmg
 ```
 
-执行步骤:
+桌面界面在 Windows 和 macOS 上都使用 macOS 交互习惯: 左侧红绿灯, 双击标题栏缩放, ⌘W / Ctrl+W 关闭面板. 文件对话框仍使用系统原生窗口.
 
-1. 解压完整 ZIP, 不要只移动其中的 EXE.
+Windows 推荐解压完整 ZIP 后运行其中的工作台, 不要只拷贝 EXE. macOS 推荐打开 DMG, 把「汉化工作台」拖到「应用程序」.
+
+使用步骤:
+
+1. 下载并打开与本机架构匹配的安装包.
 2. 如果要汉化 Cursor, 先安装 Node.js 18 或更高版本.
-3. 双击 `localization-workbench-v0.4.5.exe`.
-4. 阅读并同意首次启动声明与隐私说明.
-5. 打开“备份”页, 为目标应用创建并校验当前版本原始备份.
-6. 打开“软件中心”, 选择目标语言并安装汉化.
-7. 重新启动目标应用.
+3. 启动「汉化工作台」, 阅读并同意首次启动声明与隐私说明.
+4. 打开“备份”页, 为目标应用创建并校验当前版本原始备份.
+5. 打开“软件中心”, 选择目标语言并安装汉化.
+6. 重新启动目标应用.
 
 只使用 Claude Desktop 汉化时不需要 Node.js. Cursor 适配器会复用便携包中的 `src`, `dict` 和 `node_modules`, 并要求本机 Node.js 18+; 因此 Cursor 用户应下载完整便携包.
 
@@ -218,11 +224,12 @@ Claude Desktop 适配流程:
 
 ### macOS
 
-macOS 构建由 GitHub Actions 的 `macos-14` Runner 生成:
+macOS 构建由 GitHub Actions 的 `macos-14` Runner 按架构分别生成:
 
-- `localization-workbench-v0.4.5-macos.dmg`: 推荐安装包.
-- `localization-workbench-v0.4.5-macos-app.zip`: 保留完整 `.app` 的便携压缩包.
-- 默认构建 Universal Binary, 同时包含 Apple Silicon `arm64` 和 Intel `x86_64`.
+- `localization-workbench-v0.4.6-macos-arm64.dmg`: Apple Silicon 推荐安装包.
+- `localization-workbench-v0.4.6-macos-x64.dmg`: Intel Mac 推荐安装包.
+- 对应的 `-macos-arm64-app.zip` / `-macos-x64-app.zip` 保留完整 `.app` 便携压缩包.
+- 不再生成 Universal Binary; 请按本机芯片选择 ARM 或 x86 包.
 - 从 Finder 启动时会定位 PATH, Homebrew, NVM, Volta, asdf, mise 和 fnm 中的 Node.js, 并使用检测到的实际可执行文件运行 Cursor 引擎.
 - 自动定位 `/Applications/Cursor.app/Contents/Resources/app` 和 `/Applications/Claude.app/Contents/Resources`.
 - 安装和恢复前自动退出目标应用. 修改应用资源后按 Mach-O 文件, Framework, Helper App 和外层 `.app` 的顺序逐层执行本机 ad-hoc 重签名, 保留各组件 entitlement 并清除隔离属性.
@@ -230,7 +237,7 @@ macOS 构建由 GitHub Actions 的 `macos-14` Runner 生成:
 - 管理员启动时保留原用户 HOME, UID 和 GID. 用户级配置与备份写入后恢复原用户所有权, 避免产生 root 所有文件.
 - `.app` 内置 Cursor 引擎依赖及对应第三方许可证, Claude 翻译资源来源和 Apache-2.0 声明与 Windows 便携包保持一致.
 
-当前 Windows 主机无法运行 macOS 应用. 仓库通过目标平台条件编译和 `macos-14` 原生 CI 完成 Universal 构建, 双架构检查, Info.plist 校验, `.app` 签名校验, ZIP 完整性检查和 DMG 挂载结构验证. 配置 Apple 开发者证书与公证 Secrets 后会自动执行 Developer ID 签名, notarization, stapling 和 Gatekeeper 验证; 未配置时生成 ad-hoc 签名测试产物. 正式发布前仍应在真实 Mac 上执行一次 Cursor 与 Claude Desktop 安装、恢复和启动验收.
+当前 Windows 主机无法运行 macOS 应用. 仓库通过目标平台条件编译和 `macos-14` 原生 CI 分别构建 ARM 与 Intel 产物, 并完成单架构检查, Info.plist 校验, `.app` 签名校验, ZIP 完整性检查和 DMG 挂载结构验证. 配置 Apple 开发者证书与公证 Secrets 后会自动执行 Developer ID 签名, notarization, stapling 和 Gatekeeper 验证; 未配置时生成 ad-hoc 签名测试产物. 正式发布前仍应在真实 Mac 上执行一次 Cursor 与 Claude Desktop 安装、恢复和启动验收.
 
 ## MCP, Skill 与提示词安全
 
@@ -294,16 +301,17 @@ cargo build --release --locked --manifest-path desktop-sample/src-tauri/Cargo.to
 npm run package-desktop
 ```
 
-GitHub Actions 会并行执行 Windows 与 macOS 测试和构建. Windows 生成 EXE 与便携 ZIP, macOS 生成 `.app.zip` 与 DMG, 两个平台分别生成 SHA256. 发布前执行敏感信息扫描. 配置 `WINDOWS_CERTIFICATE` 和 `WINDOWS_CERTIFICATE_PASSWORD` 后会执行 Windows Authenticode SHA256 签名与时间戳校验. `cursor-compat.yml` 额外监控 Cursor 官方稳定版并自动生成兼容性构建. 推送 `v*` 标签时自动合并两个平台产物并创建 GitHub Release.
+GitHub Actions 会并行执行四种架构的构建: Windows x64、Windows ARM64、macOS ARM64、macOS x64. 每个架构生成对应的安装包和 SHA256. 发布前执行敏感信息扫描. 配置 `WINDOWS_CERTIFICATE` 和 `WINDOWS_CERTIFICATE_PASSWORD` 后会执行 Windows Authenticode SHA256 签名与时间戳校验. `cursor-compat.yml` 额外监控 Cursor 官方稳定版并自动生成兼容性构建. 推送 `v*` 标签时自动合并四种架构产物并创建 GitHub Release.
 
 ## 发布产物
 
-- `localization-workbench-v0.4.5-windows.zip`: Windows 推荐下载, 包含工作台 EXE, Cursor 引擎, 词典, Node.js 依赖, README 和第三方许可证.
-- `localization-workbench-v0.4.5.exe`: Windows 单文件 GUI. Claude Desktop 功能可独立运行; Cursor 功能仍需要完整便携包和 Node.js 18+.
-- `localization-workbench-v0.4.5-macos.dmg`: macOS 推荐安装包.
-- `localization-workbench-v0.4.5-macos-app.zip`: macOS `.app` 便携包, 内含 Cursor 汉化引擎和运行依赖.
+- `localization-workbench-v0.4.6-windows-x64.zip` / `.exe`: Windows x86（Intel/AMD 64 位）推荐下载.
+- `localization-workbench-v0.4.6-windows-arm64.zip` / `.exe`: Windows ARM 安装包.
+- `localization-workbench-v0.4.6-macos-arm64.dmg`: Apple Silicon 推荐安装包.
+- `localization-workbench-v0.4.6-macos-x64.dmg`: Intel Mac 推荐安装包.
+- `localization-workbench-v0.4.6-macos-arm64-app.zip` / `-macos-x64-app.zip`: 对应架构的 `.app` 便携包.
 - `cursor-i18n-zh-windows.zip`: Cursor 终端版和传统入口.
-- `SHA256SUMS.txt`: 所有发布文件的 SHA256 校验值.
+- `SHA256SUMS.txt` / `SHA256SUMS-macos.txt`: 各平台发布文件的 SHA256 校验值.
 
 ## 资源来源和许可证
 
