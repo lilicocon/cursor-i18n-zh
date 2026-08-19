@@ -150,10 +150,10 @@ app/resources/ion-dist/i18n/dynamic/en-US.json
 从 [最新发行版](https://github.com/lilicocon/cursor-i18n-zh/releases/latest) 按系统架构下载对应安装包:
 
 ```text
-Windows x86（Intel/AMD 64 位）: localization-workbench-v0.4.6-windows-x64.zip
-Windows ARM:                   localization-workbench-v0.4.6-windows-arm64.zip
-macOS ARM（Apple Silicon）:    localization-workbench-v0.4.6-macos-arm64.dmg
-macOS x86（Intel）:            localization-workbench-v0.4.6-macos-x64.dmg
+Windows x86（Intel/AMD 64 位）: localization-workbench-v0.4.7-windows-x64.zip
+Windows ARM:                   localization-workbench-v0.4.7-windows-arm64.zip
+macOS ARM（Apple Silicon）:    localization-workbench-v0.4.7-macos-arm64.dmg
+macOS x86（Intel）:            localization-workbench-v0.4.7-macos-x64.dmg
 ```
 
 桌面界面在 Windows 和 macOS 上都使用 macOS 交互习惯: 左侧红绿灯, 双击标题栏缩放, ⌘W / Ctrl+W 关闭面板. 文件对话框仍使用系统原生窗口.
@@ -230,8 +230,8 @@ Claude Desktop 适配流程:
 
 macOS 构建由 GitHub Actions 的 `macos-14` Runner 按架构分别生成:
 
-- `localization-workbench-v0.4.6-macos-arm64.dmg`: Apple Silicon 推荐安装包.
-- `localization-workbench-v0.4.6-macos-x64.dmg`: Intel Mac 推荐安装包.
+- `localization-workbench-v0.4.7-macos-arm64.dmg`: Apple Silicon 推荐安装包.
+- `localization-workbench-v0.4.7-macos-x64.dmg`: Intel Mac 推荐安装包.
 - 对应的 `-macos-arm64-app.zip` / `-macos-x64-app.zip` 保留完整 `.app` 便携压缩包.
 - 不再生成 Universal Binary; 请按本机芯片选择 ARM 或 x86 包.
 - 从 Finder 启动时会定位 PATH, Homebrew, NVM, Volta, asdf, mise 和 fnm 中的 Node.js, 并使用检测到的实际可执行文件运行 Cursor 引擎.
@@ -311,11 +311,11 @@ GitHub Actions 会并行执行四种架构的构建: Windows x64、Windows ARM64
 
 ## 发布产物
 
-- `localization-workbench-v0.4.6-windows-x64.zip` / `.exe`: Windows x86（Intel/AMD 64 位）推荐下载.
-- `localization-workbench-v0.4.6-windows-arm64.zip` / `.exe`: Windows ARM 安装包.
-- `localization-workbench-v0.4.6-macos-arm64.dmg`: Apple Silicon 推荐安装包.
-- `localization-workbench-v0.4.6-macos-x64.dmg`: Intel Mac 推荐安装包.
-- `localization-workbench-v0.4.6-macos-arm64-app.zip` / `-macos-x64-app.zip`: 对应架构的 `.app` 便携包.
+- `localization-workbench-v0.4.7-windows-x64.zip` / `.exe`: Windows x86（Intel/AMD 64 位）推荐下载.
+- `localization-workbench-v0.4.7-windows-arm64.zip` / `.exe`: Windows ARM 安装包.
+- `localization-workbench-v0.4.7-macos-arm64.dmg`: Apple Silicon 推荐安装包.
+- `localization-workbench-v0.4.7-macos-x64.dmg`: Intel Mac 推荐安装包.
+- `localization-workbench-v0.4.7-macos-arm64-app.zip` / `-macos-x64-app.zip`: 对应架构的 `.app` 便携包.
 - `cursor-i18n-zh-windows.zip`: Cursor 终端版和传统入口.
 - `SHA256SUMS.txt` / `SHA256SUMS-macos.txt`: 各平台发布文件的 SHA256 校验值.
 

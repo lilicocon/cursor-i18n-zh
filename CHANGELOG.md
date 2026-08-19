@@ -2,7 +2,7 @@
 
 本文件记录正式发布版本. `v0.3.2` 至 `v0.3.5` 是 `v0.3.6` 发布前的内部迭代, 未单独创建 GitHub Release.
 
-## [未发布]
+## [0.4.7] - 2026-08-19
 
 ### 新增
 
@@ -276,6 +276,7 @@
 - 改进 NLS 合并, 繁体转换和 JavaScript tokenizer 替换引擎.
 - 增加 CI 词典检查, ZIP 冒烟测试和 GitHub Release 自动发布.
 
+[0.4.7]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.3...v0.4.4
