@@ -410,7 +410,7 @@ fn detach_value(value: &mut Value) -> bool {
         changed = true;
     }
     for field in CLOUD_FIELDS {
-        if object.remove(*field).is_some() {
+        if object.remove(field).is_some() {
             changed = true;
         }
     }
