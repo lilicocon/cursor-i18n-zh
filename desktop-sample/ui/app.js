@@ -3,6 +3,10 @@ const state = {
   backups: [],
   usage: null,
   usageLoading: false,
+  usageTab: "overview",
+  sessions: null,
+  sessionsLoading: false,
+  sessionAction: "",
   updateStatus: null,
   updateLoading: false,
   updateDownloading: false,
@@ -310,10 +314,42 @@ function browserFallbackUsage() {
     billingCycleEnd: "2026-08-01T00:00:00Z",
     requestTotal: 152,
     tokenTotal: 1284300,
+    planTokens: 876400,
+    apiTokens: 407900,
+    onDemandEnabled: true,
+    onDemandUsed: 12.4,
+    eventTotal: 2,
+    eventTruncated: false,
+    eventsError: null,
     refreshedAtUnix: Math.floor(Date.now() / 1000),
     models: [
-      { name: "claude-4-sonnet", requests: 96, requestLimit: 500, tokens: 876400 },
-      { name: "gpt-5", requests: 56, requestLimit: 500, tokens: 407900 },
+      { name: "claude-4-sonnet", requests: 96, requestLimit: 500, tokens: 876400, planTokens: 876400, apiTokens: 0 },
+      { name: "gpt-5", requests: 56, requestLimit: 500, tokens: 407900, planTokens: 0, apiTokens: 407900 },
+    ],
+    days: [
+      { date: "2026-08-18", planRequests: 40, apiRequests: 12, planTokens: 320000, apiTokens: 180000, chargedCents: 8.2 },
+      { date: "2026-08-17", planRequests: 56, apiRequests: 44, planTokens: 556400, apiTokens: 227900, chargedCents: 16.5 },
+    ],
+    events: [
+      { timestampMs: Date.now() - 3600000, model: "claude-4-sonnet", pool: "plan", kind: "USAGE_EVENT_KIND_INCLUDED_IN_PRO", tokens: 12800, chargedCents: 0, isHeadless: false },
+      { timestampMs: Date.now() - 7200000, model: "gpt-5", pool: "api", kind: "USAGE_EVENT_KIND_USAGE_BASED", tokens: 6400, chargedCents: 12.4, isHeadless: true },
+    ],
+  };
+}
+
+function browserFallbackSessions() {
+  return {
+    running: true,
+    occupied: true,
+    remoteControlRunning: true,
+    mainCount: 1,
+    processCount: 2,
+    status: "远程控制占用",
+    detail: "浏览器预览样例: 远程控制工作进程仍在运行, 可能占用本机会话.",
+    launchPath: "浏览器预览模式\\Cursor.exe",
+    processes: [
+      { pid: 2201, ppid: 1, name: "cursor-agent", role: "remote-control", memoryKb: 84200, command: "cursor-agent --remote-control" },
+      { pid: 1044, ppid: 1, name: "Cursor", role: "main", memoryKb: 512000, command: "Cursor.exe" },
     ],
   };
 }
@@ -346,7 +382,7 @@ function browserFallbackGitHubProjects() {
     {
       name: "cursor-i18n-zh",
       fullName: "lilicocon/cursor-i18n-zh",
-      description: "为 Cursor 和 Claude Desktop 提供安全备份, 汉化安装, 原版恢复和用量监控的桌面工作台.",
+      description: "为 Cursor 和 Claude Desktop 提供安全备份, 汉化安装, 原版恢复, 用量监控和会话管理的桌面工作台.",
       htmlUrl: "https://github.com/lilicocon/cursor-i18n-zh",
       language: "JavaScript",
       stars: 13,
@@ -490,6 +526,7 @@ async function refreshEnvironmentAndApps() {
   if (state.running || state.environmentLoading) return;
   await loadEnvironment();
   await scanApps();
+  loadSessions();
 }
 
 function appLogoMark(appId) {
@@ -711,6 +748,60 @@ function formatCycleDate(value) {
   return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
 
+function formatCents(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return "--";
+  return `$${formatNumber(number / 100, 2)}`;
+}
+
+function poolLabel(value) {
+  return value === "api" ? "API / 按量" : "套餐内";
+}
+
+function roleLabel(value) {
+  const labels = {
+    "remote-control": "远程控制",
+    main: "主进程",
+    helper: "Helper",
+    gpu: "GPU",
+    renderer: "渲染",
+    plugin: "插件",
+    other: "其他",
+  };
+  return labels[value] || value || "其他";
+}
+
+function formatMemory(kb) {
+  const value = Number(kb);
+  if (!Number.isFinite(value) || value <= 0) return "--";
+  if (value >= 1024) return `${formatNumber(value / 1024, 1)} MB`;
+  return `${formatNumber(value)} KB`;
+}
+
+function formatEventTime(timestampMs) {
+  const date = new Date(Number(timestampMs));
+  if (Number.isNaN(date.getTime())) return "--";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function setUsageTab(tab) {
+  state.usageTab = tab;
+  $$("[data-usage-tab]").forEach((button) => {
+    const active = button.dataset.usageTab === tab;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  $$("[data-usage-panel]").forEach((panel) => {
+    panel.classList.toggle("hidden", panel.dataset.usagePanel !== tab);
+  });
+}
+
 function renderUsage(usage) {
   state.usage = usage;
   $("#usageError").classList.add("hidden");
@@ -725,9 +816,28 @@ function renderUsage(usage) {
   const percent = Math.max(0, Math.min(100, Number(usage.totalPercentUsed) || 0));
   $("#usagePercent").textContent = `${formatNumber(percent, 1)}%`;
   $("#usageMeterBar").style.width = `${percent}%`;
-  $("#usageApiPercent").textContent = `API 用量 ${formatNumber(usage.apiPercentUsed, 1)}%`;
+  const onDemand = usage.onDemandEnabled
+    ? ` · 按量 ${formatNumber(usage.onDemandUsed, 2)}`
+    : "";
+  $("#usageApiPercent").textContent = `API 用量 ${formatNumber(usage.apiPercentUsed, 1)}%${onDemand}`;
+  $("#usagePoolTokens").textContent = `套餐 Token ${formatNumber(usage.planTokens)} · API Token ${formatNumber(usage.apiTokens)}`;
   $("#usageCycle").textContent = `${formatCycleDate(usage.billingCycleStart)} - ${formatCycleDate(usage.billingCycleEnd)}`;
   $("#usageRefreshedAt").textContent = `刷新于 ${formatBackupTime({ createdAtUnix: usage.refreshedAtUnix })}`;
+
+  const note = $("#usageEventsNote");
+  if (usage.eventsError) {
+    note.textContent = `网页请求记录未同步: ${usage.eventsError}. 概览仍显示周期汇总.`;
+    note.classList.remove("hidden");
+  } else if (usage.eventTruncated) {
+    note.textContent = `已同步最近 ${formatNumber(usage.events?.length || 0)} 条, 周期内共 ${formatNumber(usage.eventTotal)} 条.`;
+    note.classList.remove("hidden");
+  } else {
+    note.classList.add("hidden");
+    note.textContent = "";
+  }
+  $("#usageModelSource").textContent = usage.events?.length
+    ? "已按网页请求记录汇总模型和按天用量."
+    : "当前仅有周期接口数据, 请求记录为空.";
 
   const models = Array.isArray(usage.models) ? usage.models : [];
   $("#usageModelCount").textContent = `${models.length} 个模型`;
@@ -738,18 +848,69 @@ function renderUsage(usage) {
     empty.className = "empty-row";
     empty.textContent = "当前计费周期尚无模型用量记录.";
     list.appendChild(empty);
+  } else {
+    for (const model of models) {
+      const row = document.createElement("div");
+      row.className = "usage-model-row usage-model-row-wide";
+      row.innerHTML = "<strong></strong><span></span><span></span><span></span><span></span>";
+      row.querySelector("strong").textContent = model.name;
+      const values = row.querySelectorAll("span");
+      values[0].textContent = formatNumber(model.requests);
+      values[1].textContent = formatNumber(model.planTokens);
+      values[2].textContent = formatNumber(model.apiTokens);
+      values[3].textContent = formatNumber(model.tokens);
+      list.appendChild(row);
+    }
+  }
+
+  const days = Array.isArray(usage.days) ? usage.days : [];
+  $("#usageDayCount").textContent = `${days.length} 天`;
+  const dayList = $("#usageDayList");
+  dayList.replaceChildren();
+  if (!days.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-row";
+    empty.textContent = usage.eventsError ? "请求记录未同步, 暂无按天数据." : "当前计费周期尚无按天记录.";
+    dayList.appendChild(empty);
+  } else {
+    for (const day of days) {
+      const row = document.createElement("div");
+      row.className = "usage-day-row";
+      row.innerHTML = "<strong></strong><span></span><span></span><span></span><span></span><span></span>";
+      row.querySelector("strong").textContent = day.date;
+      const values = row.querySelectorAll("span");
+      values[0].textContent = formatNumber(day.planRequests);
+      values[1].textContent = formatNumber(day.apiRequests);
+      values[2].textContent = formatNumber(day.planTokens);
+      values[3].textContent = formatNumber(day.apiTokens);
+      values[4].textContent = formatCents(day.chargedCents);
+      dayList.appendChild(row);
+    }
+  }
+
+  const events = Array.isArray(usage.events) ? usage.events : [];
+  $("#usageEventCount").textContent = `${events.length} 条`;
+  const eventList = $("#usageEventList");
+  eventList.replaceChildren();
+  if (!events.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-row";
+    empty.textContent = usage.eventsError ? "网页请求记录同步失败." : "当前计费周期尚无请求记录.";
+    eventList.appendChild(empty);
     return;
   }
-  for (const model of models) {
+  for (const event of events) {
     const row = document.createElement("div");
-    row.className = "usage-model-row";
-    row.innerHTML = "<strong></strong><span></span><span></span><span></span>";
-    row.querySelector("strong").textContent = model.name;
+    row.className = "usage-event-row";
+    row.innerHTML = "<strong></strong><span></span><span></span><span></span><span></span><span></span>";
+    row.querySelector("strong").textContent = formatEventTime(event.timestampMs);
     const values = row.querySelectorAll("span");
-    values[0].textContent = formatNumber(model.requests);
-    values[1].textContent = model.requestLimit ? formatNumber(model.requestLimit) : "--";
-    values[2].textContent = formatNumber(model.tokens);
-    list.appendChild(row);
+    values[0].textContent = event.model;
+    values[1].textContent = poolLabel(event.pool);
+    values[2].textContent = formatNumber(event.tokens);
+    values[3].textContent = formatCents(event.chargedCents);
+    values[4].textContent = event.isHeadless ? "无头 / 云端" : "本机会话";
+    eventList.appendChild(row);
   }
 }
 
@@ -776,6 +937,121 @@ async function loadUsage() {
     state.usageLoading = false;
     button.disabled = false;
     button.classList.remove("scanning");
+  }
+}
+
+function updateSessionActionButtons() {
+  const sessions = state.sessions;
+  const consent = $("#sessionConsentCheckbox").checked;
+  const busy = state.sessionsLoading || Boolean(state.sessionAction);
+  $("#sessionKillRemoteButton").disabled = busy || !consent || !sessions?.remoteControlRunning;
+  $("#sessionQuitButton").disabled = busy || !consent || !sessions?.running;
+  $("#sessionKillTreeButton").disabled = busy || !consent || !sessions?.running;
+  $("#sessionStartButton").disabled = busy || Boolean(sessions?.running && sessions?.mainCount);
+}
+
+function renderSessions(sessions) {
+  state.sessions = sessions;
+  $("#sessionsError").classList.add("hidden");
+  $("#sessionsContent").classList.remove("loading");
+  $("#sessionStatus").textContent = sessions.status || "未知";
+  $("#sessionSummary").textContent = sessions.occupied ? "当前存在占用" : sessions.running ? "本机可接管" : "没有活动会话";
+  $("#sessionRemoteState").textContent = sessions.remoteControlRunning ? "工作进程占用" : "未检测到";
+  $("#sessionMainCount").textContent = `主进程 ${formatNumber(sessions.mainCount)}`;
+  $("#sessionProcessCount").textContent = formatNumber(sessions.processCount);
+  $("#sessionLaunchPath").textContent = sessions.launchPath || "启动路径未检测";
+  $("#sessionLaunchPath").title = sessions.launchPath || "";
+  $("#sessionDetail").textContent = sessions.detail || "";
+  const badge = $("#sessionOccupiedBadge");
+  badge.textContent = sessions.occupied ? "占用中" : sessions.running ? "空闲" : "未运行";
+  badge.className = `session-occupied-badge ${sessions.occupied ? "busy" : sessions.running ? "idle" : "off"}`;
+
+  const list = $("#sessionProcessList");
+  list.replaceChildren();
+  const processes = Array.isArray(sessions.processes) ? sessions.processes : [];
+  if (!processes.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-row";
+    empty.textContent = "未检测到 Cursor 相关进程.";
+    list.appendChild(empty);
+  } else {
+    for (const process of processes) {
+      const row = document.createElement("div");
+      row.className = `session-process-row ${process.role === "remote-control" ? "occupied" : ""}`;
+      row.innerHTML = "<strong></strong><span></span><span></span><span></span><span></span>";
+      row.querySelector("strong").textContent = roleLabel(process.role);
+      const values = row.querySelectorAll("span");
+      values[0].textContent = String(process.pid);
+      values[1].textContent = process.name;
+      values[2].textContent = formatMemory(process.memoryKb);
+      values[3].textContent = process.command || "--";
+      values[3].title = process.command || "";
+      list.appendChild(row);
+    }
+  }
+  updateSessionActionButtons();
+}
+
+async function loadSessions() {
+  if (state.sessionsLoading) return;
+  state.sessionsLoading = true;
+  const button = $("#refreshSessionsButton");
+  button.disabled = true;
+  button.classList.add("scanning");
+  $("#sessionsContent").classList.add("loading");
+  $("#sessionsError").classList.add("hidden");
+  updateSessionActionButtons();
+  try {
+    const sessions = invoke ? await invoke("cursor_sessions") : browserFallbackSessions();
+    renderSessions(sessions);
+    addLog("DONE", "Cursor 会话与进程已刷新.");
+  } catch (error) {
+    const message = normalizeError(error);
+    state.sessions = null;
+    $("#sessionsContent").classList.remove("loading");
+    $("#sessionsError").textContent = message;
+    $("#sessionsError").classList.remove("hidden");
+    addLog("WARN", `Cursor 会话读取失败: ${message}`);
+    updateSessionActionButtons();
+  } finally {
+    state.sessionsLoading = false;
+    button.disabled = false;
+    button.classList.remove("scanning");
+    updateSessionActionButtons();
+  }
+}
+
+async function runSessionAction(action) {
+  if (state.sessionsLoading || state.sessionAction) return;
+  if (action !== "start" && !$("#sessionConsentCheckbox").checked) return;
+  state.sessionAction = action;
+  updateSessionActionButtons();
+  $("#sessionsContent").classList.add("loading");
+  try {
+    const sessions = invoke
+      ? await invoke("manage_cursor_session", { request: { action } })
+      : browserFallbackSessions();
+    $("#sessionConsentCheckbox").checked = false;
+    renderSessions(sessions);
+    const labels = {
+      quit: "已请求退出 Cursor",
+      "kill-tree": "已结束 Cursor 进程树",
+      "kill-remote": "已结束远程控制工作进程",
+      start: "已启动 Cursor",
+    };
+    addLog("DONE", labels[action] || "会话操作已完成.");
+    showToast(labels[action] || "会话操作已完成.");
+  } catch (error) {
+    const message = normalizeError(error);
+    $("#sessionsError").textContent = message;
+    $("#sessionsError").classList.remove("hidden");
+    addLog("WARN", `会话操作失败: ${message}`);
+    showToast(message, "warning");
+    if (state.sessions) renderSessions(state.sessions);
+  } finally {
+    state.sessionAction = "";
+    $("#sessionsContent").classList.remove("loading");
+    updateSessionActionButtons();
   }
 }
 
@@ -3124,6 +3400,15 @@ $$(".backup-action[data-backup-app]").forEach((button) => button.addEventListene
 $("#scanButton").addEventListener("click", refreshEnvironmentAndApps);
 $("#nodeRuntimeRefreshButton").addEventListener("click", refreshEnvironmentAndApps);
 $("#refreshUsageButton").addEventListener("click", loadUsage);
+$$("[data-usage-tab]").forEach((button) => {
+  button.addEventListener("click", () => setUsageTab(button.dataset.usageTab));
+});
+$("#refreshSessionsButton").addEventListener("click", loadSessions);
+$("#sessionConsentCheckbox").addEventListener("change", updateSessionActionButtons);
+$("#sessionKillRemoteButton").addEventListener("click", () => runSessionAction("kill-remote"));
+$("#sessionQuitButton").addEventListener("click", () => runSessionAction("quit"));
+$("#sessionKillTreeButton").addEventListener("click", () => runSessionAction("kill-tree"));
+$("#sessionStartButton").addEventListener("click", () => runSessionAction("start"));
 $("#checkUpdateButton").addEventListener("click", () => loadUpdateStatus({ notify: true }));
 $("#downloadUpdateButton").addEventListener("click", downloadLatestUpdate);
 $("#refreshProjectsButton").addEventListener("click", () => loadGitHubProjects({ force: true }));
@@ -3192,7 +3477,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   await registerProgressListener();
   if (!browserPreviewSection) await waitForFirstRunConsent();
   await refreshEnvironmentAndApps();
-  await Promise.all([loadUsage(), loadUpdateStatus({ notify: true })]);
+  await Promise.all([loadUsage(), loadSessions(), loadUpdateStatus({ notify: true })]);
   if (browserPreviewSection) {
     if (browserPreviewSection === "extensions" && ["mcp", "skill", "prompt", "market", "history", "transfer"].includes(requestedBrowserTab)) {
       state.extensionTab = requestedBrowserTab;

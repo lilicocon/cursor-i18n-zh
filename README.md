@@ -1,7 +1,7 @@
 <div align="center">
   <h1>汉化工作台</h1>
   <p><strong>为 Cursor 和 Claude Desktop 提供安全, 可恢复, 可持续维护的中文本地化体验</strong></p>
-  <p>版本识别 · 强制备份 · 一键汉化 · 原版恢复 · 用量监控 · MCP/Skill/提示词管理 · 扩展市场 · Windows/macOS</p>
+  <p>版本识别 · 强制备份 · 一键汉化 · 原版恢复 · 用量监控 · 会话管理 · MCP/Skill/提示词管理 · 扩展市场 · Windows/macOS</p>
 
   <p>
     <a href="https://github.com/lilicocon/cursor-i18n-zh/actions/workflows/build.yml"><img alt="构建状态" src="https://github.com/lilicocon/cursor-i18n-zh/actions/workflows/build.yml/badge.svg"></a>
@@ -60,7 +60,7 @@
     <td width="50%" align="center" valign="top">
       <a href="assets/screenshots/workbench-usage.png"><img src="assets/screenshots/workbench-usage.png" alt="Cursor 用量监控"></a><br>
       <strong>Cursor 用量监控</strong><br>
-      <sub>展示套餐, 计费周期, 请求数, Token 和模型用量, 登录令牌不会传入前端.</sub>
+      <sub>展示套餐, 计费周期, 按天 Token, 套餐/API 池和网页请求记录, 登录令牌不会传入前端.</sub>
     </td>
   </tr>
 </table>
@@ -88,6 +88,8 @@
 - 自动发现已知入口和新增的 `out/vs/workbench/workbench.*.js` 大型入口包.
 - 在写入前生成完整补丁计划, 校验 JavaScript 语法, NLS 占位符和词典歧义.
 - 将 Cursor 原生套餐和用量区域保留在账号设置中, 并提供独立用量监控页.
+- 用量页同步网页请求记录, 按天、套餐内 / API 按量和模型展示 Token, 不在本地另做一套估算.
+- 会话管理页列出本机 Cursor 进程和远程控制工作进程, 可在确认后结束占用或重启编辑器.
 
 ### Claude Desktop
 
@@ -132,12 +134,14 @@ app/resources/ion-dist/i18n/dynamic/en-US.json
 - 安装, 备份和恢复前自动结束目标应用完整进程树, 并等待文件锁释放.
 - 使用暂存文件统一提交修改. 任一步写入或复验失败时自动回滚已经提交的文件.
 - 在界面中检测 Node.js 版本, 管理员权限, 应用兼容状态和备份状态.
-- 首次启动先显示软件声明与隐私说明. 用户同意前不扫描本机应用, 不读取用量, 不检查版本.
+- 首次启动先显示软件声明与隐私说明. 用户同意前不扫描本机应用, 不读取用量, 不枚举会话进程, 不检查版本.
 - 启动后可选检查 GitHub 最新正式版本. 用户可以手动下载官方 Release 更新包, 工作台会校验 SHA256 后打开所在目录, 不静默安装, 不强制更新.
 - 更新包使用 64 KB 缓冲区流式写入磁盘并同步计算 SHA256, 不再把最大 250 MB 的安装包整体保存在内存中.
 - 已下载且 SHA256 与当前 Release 清单一致的更新包会直接复用; 损坏缓存会重新下载并通过可回滚的原子替换提交.
 - 关于页在下载过程中显示实时进度和当前阶段, 无 Content-Length 时仍显示累计下载 MB 数.
 - GitHub 项目、扩展市场、版本检查和更新下载会对 HTTP 500/502/503/504、超时及短暂连接失败执行有限重试, 403/404 等永久错误不会重复请求.
+- 用量页同步 cursor.com 请求记录, 按天、套餐内 / API 按量和模型展示 Token.
+- 会话页列出本机 Cursor 进程和远程控制工作进程, 确认后可结束占用或重新启动.
 - 在独立扩展管理页维护 Cursor 与 Claude Code 的 MCP, Skill 和提示词, 支持用户级与项目级作用域及 GitHub 更新检查.
 - 扩展检查与市场安装显示统一进度反馈; 键盘遵循 macOS 习惯: Esc 关闭面板, ⌘/Ctrl+W 关闭当前面板或窗口, ⌘/Ctrl+R 重新扫描, ⌘/Ctrl+M 最小化, 方向键切换 Tab, 并为焦点和减少动态效果提供无障碍适配.
 
@@ -263,9 +267,10 @@ macOS 构建由 GitHub Actions 的 `macos-14` Runner 按架构分别生成:
 
 - 只读 `%APPDATA%\Cursor\User\globalStorage\state.vscdb` 中的 Cursor 登录状态.
 - 登录凭据只保存在 Rust 后端内存中, 只发送给 Cursor 官方用量接口.
-- 前端只接收套餐, 计费周期, 请求数, Token 数和模型用量结果.
+- 前端只接收套餐, 计费周期, 请求数, Token 数, 按天汇总, 网页请求记录和模型用量结果.
 - 不把登录令牌返回 JavaScript, 不写日志, 不落盘, 不上传个人文件.
 - GitHub 版本检查只发送公开发行版请求, 不携带 Cursor 或 Claude 账号信息.
+- 会话管理只枚举本机 Cursor 相关进程. 结束进程需要明确确认, 不会改写 Cursor 私有数据库或云端会话分类.
 
 ## 命令行和开发验证
 

@@ -9,12 +9,14 @@ mod github;
 mod market;
 mod network;
 mod release;
+mod sessions;
 mod usage;
 
 use adapters::{
     ActionRequest, AppStatus, BackupRecord, EnvironmentStatus, OperationResult, ProgressSink,
 };
 use release::UpdateStatus;
+use sessions::{CursorSessionOverview, SessionActionRequest};
 use tauri::{AppHandle, Emitter};
 use usage::UsageOverview;
 
@@ -40,6 +42,20 @@ async fn cursor_usage() -> Result<UsageOverview, String> {
     tauri::async_runtime::spawn_blocking(usage::load_cursor_usage)
         .await
         .map_err(|error| format!("用量读取线程异常: {error}"))?
+}
+
+#[tauri::command]
+async fn cursor_sessions() -> Result<CursorSessionOverview, String> {
+    tauri::async_runtime::spawn_blocking(sessions::load_cursor_sessions)
+        .await
+        .map_err(|error| format!("会话读取线程异常: {error}"))?
+}
+
+#[tauri::command]
+async fn manage_cursor_session(request: SessionActionRequest) -> Result<CursorSessionOverview, String> {
+    tauri::async_runtime::spawn_blocking(move || sessions::manage_cursor_session(request))
+        .await
+        .map_err(|error| format!("会话操作线程异常: {error}"))?
 }
 
 #[tauri::command]
@@ -557,6 +573,8 @@ fn main() {
             environment_status,
             list_backups,
             cursor_usage,
+            cursor_sessions,
+            manage_cursor_session,
             check_for_updates,
             download_latest_update,
             open_downloaded_update,

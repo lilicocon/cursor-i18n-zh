@@ -79,6 +79,14 @@ test('desktop UI exposes usage and backup history controls', () => {
     'refreshUsageButton',
     'usageContent',
     'usageModelList',
+    'usageDailyTab',
+    'usageEventsTab',
+    'usageDayList',
+    'usageEventList',
+    'refreshSessionsButton',
+    'sessionProcessList',
+    'sessionConsentCheckbox',
+    'sessionKillRemoteButton',
     'backupHistoryList',
     'restoreConsentCheckbox',
     'backupRestoreProgress',
@@ -88,6 +96,20 @@ test('desktop UI exposes usage and backup history controls', () => {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
   assert.match(script, /invoke\("cursor_usage"\)/);
+  assert.match(script, /invoke\("cursor_sessions"\)/);
+  assert.match(script, /invoke\("manage_cursor_session"/);
+  assert.match(script, /function renderSessions\(/);
+  assert.match(script, /data-usage-tab/);
+  assert.match(desktopMain, /mod sessions;/);
+  assert.match(desktopMain, /cursor_sessions,/);
+  assert.match(desktopMain, /manage_cursor_session,/);
+  const usageRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'usage.rs'), 'utf8');
+  const sessionsRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'sessions.rs'), 'utf8');
+  assert.match(usageRs, /api\/dashboard\/get-filtered-usage-events/);
+  assert.match(usageRs, /Origin.*cursor\.com/);
+  assert.match(usageRs, /fn classify_pool/);
+  assert.match(sessionsRs, /kill-remote/);
+  assert.match(sessionsRs, /remote-control/);
   assert.match(script, /invoke\("list_backups"\)/);
   assert.match(script, /backupVersion:\s*record\.version/);
   assert.match(script, /function runBackupRestore\(/);
@@ -108,6 +130,8 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(actionBody, /modalCompletedAction\s*=\s*action/);
   assert.match(styles, /\.backup-history-row/);
   assert.match(styles, /\.usage-model-row/);
+  assert.match(styles, /\.usage-day-row/);
+  assert.match(styles, /\.session-process-row/);
 });
 
 test('desktop UI exposes About, GitHub and optional update checks', () => {
@@ -368,7 +392,7 @@ test('desktop UI gates first launch before local or network initialization', () 
   assert.match(script, /\["about", "extensions"\]\.includes\(requestedBrowserPreview\)/);
   assert.ok(
     script.indexOf('await waitForFirstRunConsent();')
-      < script.indexOf('await Promise.all([loadUsage(), loadUpdateStatus({ notify: true })]);'),
+      < script.indexOf('await Promise.all([loadUsage(), loadSessions(), loadUpdateStatus({ notify: true })]);'),
   );
 });
 
