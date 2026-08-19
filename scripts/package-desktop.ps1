@@ -1,3 +1,12 @@
+param(
+  [ValidateSet('x64', 'x86', 'arm64')]
+  [string]$Arch = 'x64'
+)
+
+if ($Arch -eq 'x86') {
+  $Arch = 'x64'
+}
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -5,16 +14,21 @@ $Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Dist = Join-Path $Root 'dist'
 $Manifest = Get-Content -LiteralPath (Join-Path $Root 'package.json') -Raw | ConvertFrom-Json
 $Version = [string]$Manifest.version
-$BuiltExe = Join-Path $Root 'desktop-sample\src-tauri\target\release\cursor-i18n-desktop-sample.exe'
+$RustTarget = if ($Arch -eq 'arm64') { 'aarch64-pc-windows-msvc' } else { 'x86_64-pc-windows-msvc' }
+$BuiltExe = Join-Path $Root "desktop-sample\src-tauri\target\$RustTarget\release\cursor-i18n-desktop-sample.exe"
+if (!(Test-Path -LiteralPath $BuiltExe -PathType Leaf) -and $Arch -eq 'x64') {
+  $BuiltExe = Join-Path $Root 'desktop-sample\src-tauri\target\release\cursor-i18n-desktop-sample.exe'
+}
 $CliZip = Join-Path $Dist 'cursor-i18n-zh-windows.zip'
 $WorkbenchName = 'localization-workbench'
-$ExeName = "$WorkbenchName-v$Version.exe"
-$PortableName = "$WorkbenchName-v$Version-windows.zip"
+$Suffix = "windows-$Arch"
+$ExeName = "$WorkbenchName-v$Version-$Suffix.exe"
+$PortableName = "$WorkbenchName-v$Version-$Suffix.zip"
 $PublishedExe = Join-Path $Dist $ExeName
 $PortableZip = Join-Path $Dist $PortableName
 $PortableTemp = Join-Path $Dist ("desktop-portable-$([guid]::NewGuid().ToString('N')).zip")
 $Stage = Join-Path $Dist ("desktop-stage-$([guid]::NewGuid().ToString('N'))")
-$Checksums = Join-Path $Dist 'SHA256SUMS.txt'
+$Checksums = Join-Path $Dist "SHA256SUMS-$Suffix.txt"
 
 function Get-Sha256([string]$Path) {
   $stream = [IO.File]::OpenRead($Path)
@@ -81,7 +95,9 @@ try {
     $hash = Get-Sha256 $asset
     "$hash  $([IO.Path]::GetFileName($asset))"
   }
-  [IO.File]::WriteAllLines($Checksums, $lines, [Text.UTF8Encoding]::new($false))
+  $encoding = [Text.UTF8Encoding]::new($false)
+  [IO.File]::WriteAllLines($Checksums, $lines, $encoding)
+  [IO.File]::WriteAllLines((Join-Path $Dist 'SHA256SUMS.txt'), $lines, $encoding)
 
   Write-Host "Desktop EXE: $PublishedExe"
   Write-Host "Desktop portable package: $PortableZip"

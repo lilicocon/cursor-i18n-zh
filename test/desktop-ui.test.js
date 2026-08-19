@@ -283,6 +283,15 @@ test('desktop UI manages Cursor and Claude Code MCP, Skills, prompts and market'
   assert.match(market, /raw\.githubusercontent\.com/);
   assert.match(buildWorkflow, /runs-on: macos-14/);
   assert.match(buildWorkflow, /package-macos\.sh/);
+  assert.match(buildWorkflow, /windows-11-arm/);
+  assert.match(buildWorkflow, /aarch64-pc-windows-msvc/);
+  assert.match(buildWorkflow, /x86_64-pc-windows-msvc/);
+  assert.match(buildWorkflow, /aarch64-apple-darwin/);
+  assert.match(buildWorkflow, /x86_64-apple-darwin/);
+  assert.match(buildWorkflow, /localization-workbench-windows-x64/);
+  assert.match(buildWorkflow, /localization-workbench-windows-arm64/);
+  assert.match(buildWorkflow, /localization-workbench-macos-arm64/);
+  assert.match(buildWorkflow, /localization-workbench-macos-x64/);
   assert.match(desktopMain, /target_os = "macos"/);
 });
 
@@ -291,6 +300,11 @@ test('desktop release flow downloads verified optional updates and scans publish
   assert.match(script, /invoke\("open_downloaded_update"/);
   assert.match(desktopMain, /async fn download_latest_update\(/);
   assert.match(release, /SHA256SUMS-macos\.txt/);
+  assert.match(release, /macos-arm64\.dmg/);
+  assert.match(release, /macos-x64\.dmg/);
+  assert.match(release, /windows-arm64\.zip/);
+  assert.match(release, /windows-x64\.zip/);
+  assert.match(release, /target_arch = "aarch64"/);
   assert.match(release, /with_config\(\)\s*\.limit/);
   assert.match(release, /fn download_file\(/);
   assert.match(release, /\[0_u8; 64 \* 1024\]/);
@@ -322,7 +336,12 @@ test('desktop UI provides accessible focus, keyboard navigation and long-operati
   assert.match(script, /function setExtensionActivity\(/);
   assert.match(script, /setAttribute\("aria-busy", String\(active\)\)/);
   assert.match(script, /\["ArrowLeft", "ArrowRight", "Home", "End"\]/);
-  assert.match(script, /event\.key !== "Escape"/);
+  assert.match(script, /event\.key === "Escape"/);
+  assert.match(script, /event\.metaKey \|\| event\.ctrlKey/);
+  assert.match(html, /id="zoomButton"/);
+  assert.match(html, /class="traffic-lights"/);
+  assert.match(script, /\$\("#zoomButton"\)/);
+  assert.match(script, /dblclick/);
   assert.match(script, /requestAnimationFrame\(\(\) => \$\("#mcpNameInput"\)\.focus\(\)\)/);
   assert.match(styles, /button:focus-visible/);
   assert.match(styles, /\.extension-activity-banner/);

@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+### 改进
+
+- 桌面工作台在 Windows 和 macOS 上统一使用 macOS 交互: 左侧红绿灯、双击标题栏缩放、⌘/Ctrl+W 关闭面板、⌘/Ctrl+R 重新扫描、⌘/Ctrl+M 最小化; 文案改为「应用程序」「标准用户 / 已授权」「触控 ID」等 macOS 习惯用语.
+- 发布产物按架构拆分, 不再打 Universal macOS 包: Windows x64（Intel/AMD）、Windows ARM64、macOS ARM64（Apple Silicon）、macOS x64（Intel）.
+
 ## [0.4.5] - 2026-08-18
 
 ### 改进
