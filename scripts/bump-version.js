@@ -8,7 +8,7 @@ const VERSION_RE = /^\d+\.\d+\.\d+$/;
 const STUB = '（发版时填写）';
 
 function read(rel) {
-  return fs.readFileSync(path.join(root, rel), 'utf8');
+  return fs.readFileSync(path.join(root, rel), 'utf8').replace(/\r\n/g, '\n');
 }
 
 function write(rel, text) {
