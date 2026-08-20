@@ -86,6 +86,58 @@ function isPropName(token, props) {
     && props.has(String(token.value));
 }
 
+// Cursor 3.16 React settings: label:cond?"A":"B" and children:["Open", icon].
+// Keep a short token window — enough for a ternary or a small children array.
+const PROP_LOOKBEHIND = 24;
+
+function isInsidePropArray(previous, props) {
+  let depth = 0;
+  for (let i = previous.length - 1; i >= 0; i--) {
+    const label = previous[i].type.label;
+    if (label === ']') depth++;
+    else if (label === '[') {
+      if (depth === 0) {
+        return i >= 2
+          && previous[i - 1].type.label === ':'
+          && isPropName(previous[i - 2], props);
+      }
+      depth--;
+    } else if (depth === 0 && label === ';') {
+      return false;
+    }
+  }
+  return false;
+}
+
+function isTernaryPropValue(previous, props) {
+  const last = previous[previous.length - 1];
+  if (!last || (last.type.label !== '?' && last.type.label !== ':')) return false;
+  for (let i = previous.length - 1; i >= 1; i--) {
+    const label = previous[i].type.label;
+    if (label === ':' && isPropName(previous[i - 1], props)) return true;
+    // Do not treat { } as a stop: template `${...}` interpolations emit them
+    // and would miss children:cond?`...`:"Disabled".
+    if (label === ';' || label === ',') return false;
+  }
+  return false;
+}
+
+function isPropLiteralContext(previous, props) {
+  if (previous.length >= 2
+      && previous[previous.length - 1].type.label === ':'
+      && isPropName(previous[previous.length - 2], props)) {
+    return true;
+  }
+  if (previous.length >= 3
+      && previous[previous.length - 1].type.label === '='
+      && previous[previous.length - 2].type.label === 'name'
+      && isPropName(previous[previous.length - 2], props)
+      && previous[previous.length - 3].type.label === '.') {
+    return true;
+  }
+  return isInsidePropArray(previous, props) || isTernaryPropValue(previous, props);
+}
+
 function applyToText(text, entries) {
   const buckets = bucketEntries(entries);
   const htmlMatchers = buildHtmlMatchers(buckets);
@@ -136,17 +188,9 @@ function applyToText(text, entries) {
       if (token.type.label === 'string' || token.type.label === 'template') {
         const literalMap = token.type.label === 'template'
           ? buckets.lit
-          : previous.length >= 2
-            && previous[previous.length - 1].type.label === ':'
-            && isPropName(previous[previous.length - 2], props)
+          : isPropLiteralContext(previous, props)
             ? buckets.prop
-            : previous.length >= 3
-              && previous[previous.length - 1].type.label === '='
-              && previous[previous.length - 2].type.label === 'name'
-              && isPropName(previous[previous.length - 2], props)
-              && previous[previous.length - 3].type.label === '.'
-                ? buckets.prop
-                : buckets.lit;
+            : buckets.lit;
         const en = String(token.value);
         const zh = literalMap.get(en);
         if (zh !== undefined) {
@@ -164,7 +208,7 @@ function applyToText(text, entries) {
     }
 
     previous.push(token);
-    if (previous.length > 4) previous.shift();
+    if (previous.length > PROP_LOOKBEHIND) previous.shift();
   }
 
   if (!replacements.length) return { text, counts, total: 0 };
