@@ -402,7 +402,7 @@ pub(crate) fn windows_helper_script(
         String::new()
     };
     format!(
-        "$pid = {pid}\n$src = {}\n$dst = {}\n$exe = {}\nStart-Sleep -Seconds 1\n$deadline = (Get-Date).AddSeconds(90)\nwhile ((Get-Process -Id $pid -ErrorAction SilentlyContinue) -and ((Get-Date) -lt $deadline)) {{ Start-Sleep -Milliseconds 400 }}\nif (Get-Process -Id $pid -ErrorAction SilentlyContinue) {{ exit 2 }}\n{delete_old}Copy-Item -Path (Join-Path $src '*') -Destination $dst -Recurse -Force\nStart-Process -FilePath (Join-Path $dst $exe)\n",
+        "$appPid = {pid}\n$src = {}\n$dst = {}\n$exe = {}\nStart-Sleep -Seconds 1\n$deadline = (Get-Date).AddSeconds(90)\nwhile ((Get-Process -Id $appPid -ErrorAction SilentlyContinue) -and ((Get-Date) -lt $deadline)) {{ Start-Sleep -Milliseconds 400 }}\nif (Get-Process -Id $appPid -ErrorAction SilentlyContinue) {{ exit 2 }}\n{delete_old}Copy-Item -Path (Join-Path $src '*') -Destination $dst -Recurse -Force\nStart-Process -FilePath (Join-Path $dst $exe)\n",
         ps_single_quote(payload),
         ps_single_quote(install_dir),
         ps_single_quote(Path::new(new_exe)),
@@ -572,7 +572,7 @@ mod tests {
             "localization-workbench-v0.4.8-windows-x64.exe",
             "localization-workbench-v0.4.7-windows-x64.exe",
         );
-        assert!(script.contains("$pid = 4242"));
+        assert!(script.contains("$appPid = 4242"));
         assert!(script.contains("Remove-Item"));
         assert!(script.contains("localization-workbench-v0.4.8-windows-x64.exe"));
         assert!(script.contains("Copy-Item"));

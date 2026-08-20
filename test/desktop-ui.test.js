@@ -353,6 +353,7 @@ test('desktop release flow downloads verified optional updates and scans publish
   assert.match(selfUpdate, /local_app_data\(\)/);
   assert.match(selfUpdate, /Expand-Archive/);
   assert.match(selfUpdate, /CREATE_NO_WINDOW/);
+  assert.match(selfUpdate, /\$appPid/);
   assert.match(selfUpdate, /hdiutil/);
   assert.match(selfUpdate, /cursor-i18n-desktop-sample\.exe/);
   assert.match(selfUpdate, /\/Volumes\//);
