@@ -26,6 +26,8 @@ pub struct UpdateStatus {
     pub release_url: &'static str,
     pub published_at: Option<String>,
     pub message: String,
+    pub can_self_update: bool,
+    pub self_update_reason: String,
 }
 
 #[derive(Serialize)]
@@ -82,6 +84,8 @@ pub fn check_for_updates() -> Result<UpdateStatus, String> {
             .and_then(Value::as_str)
             .map(str::to_string),
         message,
+        can_self_update: false,
+        self_update_reason: String::new(),
     })
 }
 
