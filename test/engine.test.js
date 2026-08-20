@@ -192,3 +192,58 @@ test('matches an escaped quote only when the complete literal value matches', ()
   assert.equal(text, "const exact='不再询问';const embedded='\\'Open Browser\\'';");
   assert.doesNotThrow(() => new vm.Script(text));
 });
+
+test('replaces both branches of a whitelisted property ternary', () => {
+  const dict = new Map([
+    ['Menu Bar Icon', { zh: '菜单栏图标', ctx: ['prop'] }],
+    ['System Tray Icon', { zh: '系统托盘图标', ctx: ['prop'] }],
+  ]);
+  const src = 'const row={label:isMac?"Menu Bar Icon":"System Tray Icon",value:isMac?"Menu Bar Icon":"System Tray Icon"};';
+  const { text, total } = applyToText(src, dict);
+
+  assert.equal(total, 2);
+  assert.match(text, /label:isMac\?"菜单栏图标":"系统托盘图标"/);
+  assert.match(text, /value:isMac\?"Menu Bar Icon":"System Tray Icon"/);
+  assert.doesNotThrow(() => new vm.Script(text));
+});
+
+test('replaces strings inside a whitelisted property array', () => {
+  const dict = new Map([
+    ['Open', { zh: '打开', ctx: ['prop'] }],
+    ['Task Models', { zh: '任务模型', ctx: ['prop'] }],
+  ]);
+  const src = 'const ui={children:["Open", icon], heading:["Task Models", extra], other:["Open"]};';
+  const { text, total } = applyToText(src, dict);
+
+  assert.equal(total, 2);
+  assert.match(text, /children:\["打开", icon\]/);
+  assert.match(text, /heading:\["任务模型", extra\]/);
+  assert.match(text, /other:\["Open"\]/);
+  assert.doesNotThrow(() => new vm.Script(text));
+});
+
+test('replaces a property ternary whose true branch is a template', () => {
+  const dict = new Map([
+    ['Disabled', { zh: '已禁用', ctx: ['prop'] }],
+  ]);
+  const src = 'Zj("span",{className:"x",children:g>0?`$${X8i(g)}`:"Disabled"})';
+  const { text, total } = applyToText(src, dict);
+
+  assert.equal(total, 1);
+  assert.match(text, /:"已禁用"/);
+  assert.doesNotThrow(() => new vm.Script(text));
+});
+
+test('keeps assigned ternaries as literals unless the entry allows lit', () => {
+  const dict = new Map([
+    ['Copy Domains', { zh: '复制域名', ctx: ['prop'] }],
+    ['Run Diagnostic', { zh: '运行诊断' }],
+  ]);
+  const src = 'const a=copied?"Copied":"Copy Domains";const b=busy?"Running Diagnostic":"Run Diagnostic";';
+  const { text, total } = applyToText(src, dict);
+
+  assert.equal(total, 1);
+  assert.match(text, /"Copy Domains"/);
+  assert.match(text, /"运行诊断"/);
+  assert.doesNotThrow(() => new vm.Script(text));
+});

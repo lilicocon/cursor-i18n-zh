@@ -1340,5 +1340,14 @@
   "Side chats cannot be moved to another location": "侧边聊天无法移到其他位置",
   "View setup instructions": "查看设置说明",
   "Your GitHub connection session expired. Please try connecting again.": "GitHub 连接会话已过期。请重新连接。",
-  "Your team admin can switch to 'Privacy Mode' to use cloud agents.": "你的团队管理员可以切换到隐私模式以使用云端智能体。"
+  "Your team admin can switch to 'Privacy Mode' to use cloud agents.": "你的团队管理员可以切换到隐私模式以使用云端智能体。",
+  "No Repo": "无仓库",
+  "Set up Environment": "设置环境",
+  "Set up Cloud Environment": "设置云端环境",
+  "1 File Changed": "1 个文件已更改",
+  " Files Changed": " 个文件已更改",
+  "Give Agents a Computer": "给智能体一台电脑",
+  "Help Agents Ship Better Code": "帮助智能体交付更好的代码",
+  "Send New Messages without queuing?": "不排队直接发送新消息？",
+  "New messages now steer Agent instead of interrupting": "新消息现在会引导智能体，而不是中断它"
 }
