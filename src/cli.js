@@ -11,7 +11,7 @@ const { CODE_TARGETS, NLS_MESSAGES, NLS_KEYS, PRODUCT_JSON } = require('./config
 const { discoverTargets } = require('./discover');
 const { loadDicts } = require('./dict');
 const { applyToText } = require('./engine');
-const { embedAccountUsage } = require('./settings-usage');
+const { embedAccountUsage, expandUsageMatcherSets } = require('./settings-usage');
 const { buildPatchedNls, findLanguagePack, waitForLanguagePackRemoval } = require('./nls');
 const {
   backupDir,
@@ -293,7 +293,8 @@ function buildPatchPlan(ctx) {
   for (const rel of ctx.targets) {
     const src = fs.readFileSync(sourcePath(ctx, rel), 'utf8');
     const accountUsage = embedAccountUsage(src);
-    const { text, counts, total } = applyToText(accountUsage.text, ctx.dicts.code);
+    const usageMatchers = expandUsageMatcherSets(accountUsage.text);
+    const { text, counts, total } = applyToText(usageMatchers.text, ctx.dicts.code);
     syntaxCheck(text, rel);
     for (const en of counts.keys()) hit.add(en);
     report.files[rel] = total;

@@ -149,4 +149,21 @@ function embedAccountUsage(text) {
   return embedReactAccountUsage(text);
 }
 
-module.exports = { embedAccountUsage, INJECTION_MARKER };
+// Server usage copy is remapped only when it exactly matches these Set keys.
+// Keep the keys English; add variants Cursor started sending later.
+const USAGE_MATCHER_SET = '["Consumed by Auto. Additional usage consumes API quota.","Additional usage beyond limits consumes API quota or on-demand spend.","Additional usage beyond limits consumes API quota or on-demand usage."]';
+const USAGE_MATCHER_EXTRA = 'Additional usage beyond limits consumes on-demand spend.';
+
+function expandUsageMatcherSets(text) {
+  if (!text.includes(USAGE_MATCHER_SET) || text.includes(`"${USAGE_MATCHER_EXTRA}"`)) {
+    return { text, expanded: false };
+  }
+  return {
+    text: text.split(USAGE_MATCHER_SET).join(
+      `["Consumed by Auto. Additional usage consumes API quota.","Additional usage beyond limits consumes API quota or on-demand spend.","Additional usage beyond limits consumes API quota or on-demand usage.","${USAGE_MATCHER_EXTRA}"]`,
+    ),
+    expanded: true,
+  };
+}
+
+module.exports = { embedAccountUsage, expandUsageMatcherSets, INJECTION_MARKER };
