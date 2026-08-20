@@ -1,6 +1,6 @@
 {
   "name": "cursor-i18n-zh",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "description": "Cursor 与 Claude Desktop 跨平台中文汉化工作台: 支持 Windows / macOS, 简体和繁体, 一键安装和恢复",
   "type": "commonjs",
   "license": "MIT",
