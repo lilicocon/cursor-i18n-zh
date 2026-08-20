@@ -207,6 +207,19 @@ test('replaces both branches of a whitelisted property ternary', () => {
   assert.doesNotThrow(() => new vm.Script(text));
 });
 
+test('does not treat a later ternary as an earlier property after a comma', () => {
+  const dict = new Map([
+    ['Open', { zh: '打开', ctx: ['prop'] }],
+    ['Save', { zh: '保存', ctx: ['prop'] }],
+  ]);
+  const src = 'const row={label:"Keep", other:flag?"Open":"Save"};';
+  const { text, total } = applyToText(src, dict);
+
+  assert.equal(total, 0);
+  assert.match(text, /other:flag\?"Open":"Save"/);
+  assert.doesNotThrow(() => new vm.Script(text));
+});
+
 test('replaces strings inside a whitelisted property array', () => {
   const dict = new Map([
     ['Open', { zh: '打开', ctx: ['prop'] }],
