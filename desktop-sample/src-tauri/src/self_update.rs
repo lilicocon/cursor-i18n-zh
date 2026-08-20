@@ -112,6 +112,7 @@ fn stage_and_schedule(downloaded: &UpdateDownloadResult) -> Result<(), String> {
                 &install_root,
                 &new_name,
                 &old_name,
+                &update_cache_dir(),
             )?;
             spawn_windows_helper(&helper)?;
         }
@@ -121,17 +122,25 @@ fn stage_and_schedule(downloaded: &UpdateDownloadResult) -> Result<(), String> {
             extract_macos_dmg(&package, &payload)?;
             let staged_app = find_macos_payload_app(&payload)?;
             reject_payload_symlinks(&staged_app)?;
-            let helper = write_macos_helper(&work, current_pid, &staged_app, &install_root)?;
+            let helper = write_macos_helper(
+                &work,
+                current_pid,
+                &staged_app,
+                &install_root,
+                &update_cache_dir(),
+            )?;
             spawn_unix_helper(&helper)?;
         }
         Ok(())
     }
 }
 
+fn update_cache_dir() -> PathBuf {
+    local_app_data().join("updates")
+}
+
 fn update_work_dir(version: &str) -> Result<PathBuf, String> {
-    let dir = local_app_data()
-        .join("updates")
-        .join(format!("v{}", version.trim()));
+    let dir = update_cache_dir().join(format!("v{}", version.trim()));
     fs::create_dir_all(&dir).map_err(|error| format!("无法创建更新目录：{error}"))?;
     Ok(dir)
 }
@@ -392,6 +401,7 @@ pub(crate) fn windows_helper_script(
     install_dir: &Path,
     new_exe: &str,
     old_exe: &str,
+    cache: &Path,
 ) -> String {
     let delete_old = if old_exe != new_exe {
         format!(
@@ -402,18 +412,25 @@ pub(crate) fn windows_helper_script(
         String::new()
     };
     format!(
-        "$appPid = {pid}\n$src = {}\n$dst = {}\n$exe = {}\nStart-Sleep -Seconds 1\n$deadline = (Get-Date).AddSeconds(90)\nwhile ((Get-Process -Id $appPid -ErrorAction SilentlyContinue) -and ((Get-Date) -lt $deadline)) {{ Start-Sleep -Milliseconds 400 }}\nif (Get-Process -Id $appPid -ErrorAction SilentlyContinue) {{ exit 2 }}\n{delete_old}Copy-Item -Path (Join-Path $src '*') -Destination $dst -Recurse -Force\nStart-Process -FilePath (Join-Path $dst $exe)\n",
+        "$appPid = {pid}\n$src = {}\n$dst = {}\n$exe = {}\n$cache = {}\nStart-Sleep -Seconds 1\n$deadline = (Get-Date).AddSeconds(90)\nwhile ((Get-Process -Id $appPid -ErrorAction SilentlyContinue) -and ((Get-Date) -lt $deadline)) {{ Start-Sleep -Milliseconds 400 }}\nif (Get-Process -Id $appPid -ErrorAction SilentlyContinue) {{ exit 2 }}\n{delete_old}Copy-Item -Path (Join-Path $src '*') -Destination $dst -Recurse -Force\nif (-not $?) {{ exit 3 }}\nStart-Process -FilePath (Join-Path $dst $exe)\nRemove-Item -LiteralPath $cache -Recurse -Force -ErrorAction SilentlyContinue\n",
         ps_single_quote(payload),
         ps_single_quote(install_dir),
         ps_single_quote(Path::new(new_exe)),
+        ps_single_quote(cache),
     )
 }
 
-pub(crate) fn macos_helper_script(pid: u32, staged_app: &Path, install_app: &Path) -> String {
+pub(crate) fn macos_helper_script(
+    pid: u32,
+    staged_app: &Path,
+    install_app: &Path,
+    cache: &Path,
+) -> String {
     format!(
-        "#!/bin/bash\nset -euo pipefail\npid={pid}\nsrc={}\ndst={}\nsleep 1\nfor _ in $(seq 1 225); do\n  if ! kill -0 \"$pid\" 2>/dev/null; then\n    break\n  fi\n  sleep 0.4\ndone\nif kill -0 \"$pid\" 2>/dev/null; then\n  exit 2\nfi\nditto \"$src\" \"$dst\"\nopen \"$dst\"\n",
+        "#!/bin/bash\nset -euo pipefail\npid={pid}\nsrc={}\ndst={}\ncache={}\nsleep 1\nfor _ in $(seq 1 225); do\n  if ! kill -0 \"$pid\" 2>/dev/null; then\n    break\n  fi\n  sleep 0.4\ndone\nif kill -0 \"$pid\" 2>/dev/null; then\n  exit 2\nfi\nditto \"$src\" \"$dst\"\nopen \"$dst\"\nrm -rf \"$cache\"\n",
         sh_single_quote(staged_app),
         sh_single_quote(install_app),
+        sh_single_quote(cache),
     )
 }
 
@@ -425,11 +442,12 @@ fn write_windows_helper(
     install_dir: &Path,
     new_exe: &str,
     old_exe: &str,
+    cache: &Path,
 ) -> Result<PathBuf, String> {
     let path = work.join("apply-update.ps1");
     fs::write(
         &path,
-        windows_helper_script(pid, payload, install_dir, new_exe, old_exe),
+        windows_helper_script(pid, payload, install_dir, new_exe, old_exe, cache),
     )
     .map_err(|error| format!("无法写入更新脚本：{error}"))?;
     Ok(path)
@@ -441,10 +459,14 @@ fn write_macos_helper(
     pid: u32,
     staged_app: &Path,
     install_app: &Path,
+    cache: &Path,
 ) -> Result<PathBuf, String> {
     let path = work.join("apply-update.sh");
-    fs::write(&path, macos_helper_script(pid, staged_app, install_app))
-        .map_err(|error| format!("无法写入更新脚本：{error}"))?;
+    fs::write(
+        &path,
+        macos_helper_script(pid, staged_app, install_app, cache),
+    )
+    .map_err(|error| format!("无法写入更新脚本：{error}"))?;
     use std::os::unix::fs::PermissionsExt;
     let mut permissions = fs::metadata(&path)
         .map_err(|error| error.to_string())?
@@ -571,12 +593,14 @@ mod tests {
             Path::new("C:\\app"),
             "localization-workbench-v0.4.8-windows-x64.exe",
             "localization-workbench-v0.4.7-windows-x64.exe",
+            Path::new("C:\\updates"),
         );
         assert!(script.contains("$appPid = 4242"));
-        assert!(script.contains("Remove-Item"));
+        assert!(script.contains("$old = Join-Path $dst"));
         assert!(script.contains("localization-workbench-v0.4.8-windows-x64.exe"));
         assert!(script.contains("Copy-Item"));
         assert!(script.contains("Start-Process"));
+        assert!(script.contains("Remove-Item -LiteralPath $cache"));
     }
 
     #[test]
@@ -587,9 +611,11 @@ mod tests {
             Path::new("C:\\app"),
             "localization-workbench-v0.4.8-windows-x64.exe",
             "localization-workbench-v0.4.8-windows-x64.exe",
+            Path::new("C:\\updates"),
         );
-        assert!(!script.contains("Remove-Item"));
+        assert!(!script.contains("$old = Join-Path $dst"));
         assert!(script.contains("Copy-Item"));
+        assert!(script.contains("Remove-Item -LiteralPath $cache"));
     }
 
     #[test]
@@ -598,10 +624,12 @@ mod tests {
             99,
             Path::new("/tmp/payload/汉化工作台.app"),
             Path::new("/Applications/汉化工作台.app"),
+            Path::new("/tmp/updates"),
         );
         assert!(script.contains("pid=99"));
         assert!(script.contains("ditto"));
         assert!(script.contains("open"));
+        assert!(script.contains("rm -rf \"$cache\""));
         assert!(script.contains("/Applications/汉化工作台.app"));
     }
 }
