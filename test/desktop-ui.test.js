@@ -502,17 +502,23 @@ test('desktop frontend never receives or renders Cursor credentials', () => {
 });
 
 test('desktop and package versions are synchronized', () => {
+  const { check } = require(path.join(root, 'scripts', 'bump-version.js'));
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const tauriConfig = JSON.parse(fs.readFileSync(
     path.join(root, 'desktop-sample', 'src-tauri', 'tauri.conf.json'),
     'utf8',
   ));
-  assert.match(packageJson.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(tauriConfig.version, packageJson.version);
+  assert.equal(check(), packageJson.version);
   assert.equal(tauriConfig.identifier, 'com.licocon.i18n-workbench');
-  assert.ok(cargo.split(/\r?\n/).includes(`version = "${packageJson.version}"`));
   assert.ok(cargo.split(/\r?\n/).includes('authors = ["licocon"]'));
-  assert.ok(html.includes(`v${packageJson.version}`));
+});
+
+test('release playbook is the only bump path', () => {
+  const skill = fs.readFileSync(path.join(root, '.cursor', 'skills', 'release', 'SKILL.md'), 'utf8');
+  const agents = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+  assert.match(skill, /node scripts\/bump-version\.js NEW/);
+  assert.match(skill, /git tag -a vNEW/);
+  assert.match(agents, /\.cursor\/skills\/release\/SKILL\.md/);
 });
 
 test('Cursor compatibility workflow bounds and cleans silent installer execution', () => {

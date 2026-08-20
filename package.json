@@ -29,6 +29,7 @@
     "ui": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gui.ps1",
     "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1",
     "package-desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-desktop.ps1",
+    "version-check": "node scripts/bump-version.js --check",
     "test": "node scripts/test.js"
   },
   "engines": {
