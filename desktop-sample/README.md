@@ -1,4 +1,4 @@
-# 汉化工作台 v0.4.7
+# 汉化工作台 v0.4.8
 
 执行以下约束:
 
@@ -13,6 +13,10 @@
 - 只读显示 Cursor 套餐, 计费周期, 请求数, Token 数和模型明细, 禁止向前端暴露登录令牌.
 - 写入失败时恢复本轮已处理文件.
 - 验证时只运行安全预检, 禁止执行真实安装或恢复.
+
+## 工作台自更新
+
+关于页检查正式发行版时不会自动下载. 点击「下载并安装更新」后才下载、校验并替换当前安装, 然后重启工作台; 不静默安装、不强制更新. 安装成功后会删除本地 `updates` 缓存（含本次下载包、解压目录和旧版本缓存）; 安装失败或改为手动替换时保留该目录. Linux、安装目录不可写、开发版 exe、以及从已挂载 DMG 运行时会改为打开更新包文件夹, 需手动替换.
 
 ## 新版本自动兼容
 
@@ -229,7 +233,7 @@ npm run package-desktop
 
 ```text
 src-tauri\target\x86_64-pc-windows-msvc\release\cursor-i18n-desktop-sample.exe
-..\dist\localization-workbench-v0.4.7-windows-x64.exe
-..\dist\localization-workbench-v0.4.7-windows-x64.zip
+..\dist\localization-workbench-v0.4.8-windows-x64.exe
+..\dist\localization-workbench-v0.4.8-windows-x64.zip
 ..\dist\SHA256SUMS-windows-x64.txt
 ```

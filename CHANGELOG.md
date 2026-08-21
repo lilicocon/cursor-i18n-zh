@@ -2,6 +2,19 @@
 
 本文件记录正式发布版本. `v0.3.2` 至 `v0.3.5` 是 `v0.3.6` 发布前的内部迭代, 未单独创建 GitHub Release.
 
+## [0.4.8] - 2026-08-20
+
+### 新增
+
+- 关于页点击「下载并安装更新」后, 走现有 GitHub 发行版下载和 SHA256 校验, 再替换当前安装并重启. 检查时不自动下载, 也不静默或强制更新.
+- 安装成功后删除本地 `updates` 缓存（本次 zip/dmg、解压目录、旧版本缓存）. 失败或改为打开文件夹时保留, 方便手动替换.
+- Linux、安装目录不可写、Windows 开发版 exe、从已挂载 DMG（`/Volumes/`）运行时仍需手动替换.
+
+### 改进
+
+- 补齐 Cursor 3.16 React 设置与聊天界面漏翻: 引擎支持属性数组和三元分支, 词典补上精确条目.
+- 消歧: Open / Save / Review / Repositories 只在属性上下文替换; Code Intelligence 译为「索引和文档」; Queue 译为「队列」; 0 minutes left 译为「剩余 0 分钟」. 不是宣称 100% 覆盖全部 Cursor / VS Code 界面.
+
 ## [0.4.7] - 2026-08-19
 
 ### 新增
@@ -284,6 +297,7 @@
 - 改进 NLS 合并, 繁体转换和 JavaScript tokenizer 替换引擎.
 - 增加 CI 词典检查, ZIP 冒烟测试和 GitHub Release 自动发布.
 
+[0.4.8]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.4...v0.4.5

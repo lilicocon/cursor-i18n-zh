@@ -299,7 +299,7 @@ function browserFallbackApps() {
   return [
     {
       id: "cursor", name: "Cursor", installed: true, ready: true, path: "浏览器预览模式",
-      version: "preview", state: "适配器可用", stateTone: "success", adapterVersion: "0.4.7",
+      version: "preview", state: "适配器可用", stateTone: "success", adapterVersion: "0.4.8",
       backupAvailable: true, backupPath: "浏览器预览模式\\backup\\preview", backupFiles: 7,
       backupMessage: "浏览器预览样例: 7 个文件已通过完整性校验", localized: false, reason: null,
       autoCompatible: true, compatibilityMessage: "已按资源结构自动适配未来 Cursor 版本, 安装前仍会执行完整语法预检",
@@ -405,13 +405,15 @@ function browserFallbackSessions() {
 
 function browserFallbackUpdateStatus() {
   return {
-    currentVersion: "0.4.7",
-    latestVersion: "0.4.7",
+    currentVersion: "0.4.8",
+    latestVersion: "0.4.8",
     updateAvailable: false,
     currentAhead: false,
     releaseUrl: "https://github.com/lilicocon/cursor-i18n-zh/releases",
     publishedAt: new Date().toISOString(),
-    message: "浏览器预览样例: 当前 v0.4.7 已是最新版本",
+    message: "浏览器预览样例: 当前 v0.4.8 已是最新版本",
+    canSelfUpdate: false,
+    selfUpdateReason: "",
   };
 }
 
@@ -1190,7 +1192,10 @@ function renderUpdateStatus(status, notify = false) {
   pill.className = `pill ${status.updateAvailable ? "warning" : "success"}`;
   $("#updateCurrentVersion").textContent = `v${status.currentVersion}`;
   $("#updateLatestVersion").textContent = `v${status.latestVersion}`;
-  $("#updateMessage").textContent = status.message;
+  $("#updateMessage").textContent =
+    status.updateAvailable && status.selfUpdateReason
+      ? `${status.message} ${status.selfUpdateReason}`
+      : status.message;
   $("#viewUpdateButton").classList.toggle("hidden", !status.updateAvailable);
   $("#downloadUpdateButton").classList.toggle("hidden", !status.updateAvailable);
   if (notify && status.updateAvailable) {
@@ -1237,16 +1242,33 @@ async function downloadLatestUpdate() {
   window.clearTimeout(state.updateProgressHideTimer);
   state.updateProgressHideTimer = null;
   const button = $("#downloadUpdateButton");
-  setButtonBusy(button, true, "下载中...");
-  setUpdateDownloadProgress(1, "正在准备更新下载...");
+  setButtonBusy(button, true, "下载并安装...");
+  setUpdateDownloadProgress(1, "正在准备更新...");
   try {
     const result = invoke
-      ? await invoke("download_latest_update")
-      : { version: "0.4.7", path: "D:\\Downloads\\localization-workbench.zip", sha256: "demo", cached: false };
-    addLog("DONE", `更新包 v${result.version} ${result.cached ? "已从本地缓存复用" : "已流式下载"}并通过 SHA256 校验: ${result.path}`);
-    setUpdateDownloadProgress(100, result.cached ? "本地缓存已通过 SHA256 校验" : "更新包已下载并通过 SHA256 校验", "complete");
-    showToast(`更新包 v${result.version} ${result.cached ? "缓存已校验" : "下载已完成"}.`, "success");
-    if (invoke) {
+      ? await invoke("install_latest_update")
+      : {
+          version: "0.4.8",
+          path: "D:\\Downloads\\localization-workbench.zip",
+          sha256: "demo",
+          cached: false,
+          restarting: false,
+          fallback: true,
+          message: "浏览器预览不会安装更新",
+        };
+    addLog(
+      "DONE",
+      `更新包 v${result.version} ${result.cached ? "已从本地缓存复用" : "已流式下载"}并通过 SHA256 校验: ${result.path}`,
+    );
+    if (result.restarting) {
+      setUpdateDownloadProgress(100, result.message || "更新已就绪, 即将重启", "complete");
+      showToast(result.message || "更新已就绪，即将重启工作台", "success");
+      if (invoke) await invoke("quit_for_update");
+      return;
+    }
+    setUpdateDownloadProgress(100, result.message || "已改为打开更新包所在文件夹", "complete");
+    showToast(result.message || "已改为打开更新包所在文件夹", "warning");
+    if (invoke && result.path) {
       try {
         await invoke("open_downloaded_update", { path: result.path });
       } catch (error) {

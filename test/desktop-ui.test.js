@@ -182,7 +182,8 @@ test('desktop UI exposes About, GitHub and optional update checks', () => {
   assert.match(html, /github\.com\/lilicocon\/cursor-i18n-zh/);
   assert.match(html, /github\.com\/lilicocon\.png\?size=160/);
   assert.match(html, /86jp_DfoGmTool/);
-  assert.match(html, /不自动下载、不静默安装、不强制更新/);
+  assert.match(html, /检查时不自动下载、不静默安装、不强制更新/);
+  assert.match(html, /下载并安装更新/);
   assert.match(script, /invoke\("check_for_updates"\)/);
   assert.match(script, /invoke\("github_projects"\)/);
   assert.match(script, /86jp_DfoGmTool/);
@@ -343,9 +344,30 @@ test('desktop UI manages Cursor and Claude Code MCP, Skills, prompts and market'
 });
 
 test('desktop release flow downloads verified optional updates and scans publish artifacts', () => {
-  assert.match(script, /invoke\("download_latest_update"\)/);
+  const selfUpdate = fs.readFileSync(
+    path.join(root, 'desktop-sample', 'src-tauri', 'src', 'self_update.rs'),
+    'utf8',
+  );
+  assert.match(script, /invoke\("install_latest_update"\)/);
+  assert.match(script, /invoke\("quit_for_update"\)/);
   assert.match(script, /invoke\("open_downloaded_update"/);
+  assert.match(desktopMain, /mod self_update;/);
   assert.match(desktopMain, /async fn download_latest_update\(/);
+  assert.match(desktopMain, /async fn install_latest_update\(/);
+  assert.match(desktopMain, /fn quit_for_update\(/);
+  assert.match(selfUpdate, /fn apply_downloaded_update/);
+  assert.match(selfUpdate, /local_app_data\(\)/);
+  assert.match(selfUpdate, /Expand-Archive/);
+  assert.match(selfUpdate, /CREATE_NO_WINDOW/);
+  assert.match(selfUpdate, /\$appPid/);
+  assert.match(selfUpdate, /Remove-Item -LiteralPath \$cache/);
+  assert.match(selfUpdate, /rm -rf \\"\$cache\\"/);
+  assert.match(selfUpdate, /hdiutil/);
+  assert.match(selfUpdate, /cursor-i18n-desktop-sample\.exe/);
+  assert.match(selfUpdate, /\/Volumes\//);
+  assert.doesNotMatch(selfUpdate, /tauri-plugin-updater/);
+  assert.doesNotMatch(selfUpdate, /dirs::/);
+  assert.doesNotMatch(cargo, /tauri-plugin-updater/);
   assert.match(release, /SHA256SUMS-macos\.txt/);
   assert.match(release, /macos-arm64\.dmg/);
   assert.match(release, /macos-x64\.dmg/);

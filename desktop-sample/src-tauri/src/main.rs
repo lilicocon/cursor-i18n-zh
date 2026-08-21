@@ -10,6 +10,7 @@ mod github;
 mod market;
 mod network;
 mod release;
+mod self_update;
 mod sessions;
 mod usage;
 
@@ -77,24 +78,46 @@ async fn manage_cursor_session(request: SessionActionRequest) -> Result<CursorSe
 #[tauri::command]
 async fn check_for_updates() -> Result<UpdateStatus, String> {
     adapters::require_first_run_consent()?;
-    tauri::async_runtime::spawn_blocking(release::check_for_updates)
+    let mut status = tauri::async_runtime::spawn_blocking(release::check_for_updates)
         .await
-        .map_err(|error| format!("版本检查线程异常: {error}"))?
+        .map_err(|error| format!("版本检查线程异常: {error}"))??;
+    let (can_self_update, self_update_reason) = self_update::self_update_capability();
+    status.can_self_update = can_self_update;
+    status.self_update_reason = self_update_reason;
+    Ok(status)
+}
+
+fn download_update_blocking(app: AppHandle) -> Result<release::UpdateDownloadResult, String> {
+    release::download_latest_update(|percent, message| {
+        let _ = app.emit(
+            "update-download-progress",
+            UpdateDownloadProgress { percent, message },
+        );
+    })
 }
 
 #[tauri::command]
 async fn download_latest_update(app: AppHandle) -> Result<release::UpdateDownloadResult, String> {
     adapters::require_first_run_consent()?;
+    tauri::async_runtime::spawn_blocking(move || download_update_blocking(app))
+        .await
+        .map_err(|error| format!("更新包下载线程异常: {error}"))?
+}
+
+#[tauri::command]
+async fn install_latest_update(app: AppHandle) -> Result<self_update::InstallUpdateResult, String> {
+    adapters::require_first_run_consent()?;
     tauri::async_runtime::spawn_blocking(move || {
-        release::download_latest_update(|percent, message| {
-            let _ = app.emit(
-                "update-download-progress",
-                UpdateDownloadProgress { percent, message },
-            );
-        })
+        let downloaded = download_update_blocking(app)?;
+        Ok(self_update::apply_downloaded_update(&downloaded))
     })
     .await
-    .map_err(|error| format!("更新包下载线程异常: {error}"))?
+    .map_err(|error| format!("更新安装线程异常: {error}"))?
+}
+
+#[tauri::command]
+fn quit_for_update(app: AppHandle) {
+    app.exit(0);
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -599,6 +622,8 @@ fn main() {
             manage_cursor_session,
             check_for_updates,
             download_latest_update,
+            install_latest_update,
+            quit_for_update,
             open_downloaded_update,
             save_run_logs,
             github_projects,

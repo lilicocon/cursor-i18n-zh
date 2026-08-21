@@ -28,7 +28,11 @@ const PROPS = [
   'ariaLabel', 'aria-label', 'displayName', 'shortTitle', 'category',
   'loadingText', 'errorText', 'successText', 'helperText', 'hintText',
   'secondaryText', 'primaryText', 'badgeText', 'headerTitle', 'sectionTitle',
-  'dialogTitle', 'modalTitle', 'footerText',
+  'dialogTitle', 'modalTitle', 'footerText', 'accessibleLabel',
+  'autoTitle', 'apiTitle', 'autoDescription', 'apiDescription',
+  'autoBeyondLimitDescription', 'autoUsageBarLabel', 'apiUsageBarLabel',
+  'protectionDescription', 'pillLabel', 'trayLabel', 'ctaLabel',
+  'collectionLabel', 'primaryLabel', 'secondaryLabel',
   // Cursor 设置导航使用 tab id 作为属性名, 对应值仍是可见标题.
   'general', 'profile', 'vscode-settings', 'appearance', 'fun', 'plan-usage',
   'chat', 'browser', 'tab', 'models', 'git-prs', 'rules', 'plugins', 'customize',
