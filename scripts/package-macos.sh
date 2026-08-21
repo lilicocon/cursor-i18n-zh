@@ -55,7 +55,7 @@ for variable in APPLE_SIGNING_IDENTITY APPLE_ID APPLE_APP_PASSWORD APPLE_TEAM_ID
 done
 cargo tauri build --target "$TARGET" --bundles app
 
-APP="$TAURI/target/$TARGET/release/bundle/macos/汉化工作台.app"
+APP="$TAURI/target/$TARGET/release/bundle/macos/译台.app"
 ENGINE="$APP/Contents/Resources/engine"
 if [[ ! -d "$APP" ]]; then
   echo "Missing macOS app bundle: $APP" >&2
@@ -131,17 +131,17 @@ fi
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$APP_ZIP"
 unzip -t "$APP_ZIP" >/dev/null
 mkdir -p "$DMG_STAGE"
-ditto "$APP" "$DMG_STAGE/汉化工作台.app"
+ditto "$APP" "$DMG_STAGE/译台.app"
 ln -s /Applications "$DMG_STAGE/Applications"
-hdiutil create -volname "汉化工作台" -srcfolder "$DMG_STAGE" -ov -format UDZO "$DMG" >/dev/null
+hdiutil create -volname "译台" -srcfolder "$DMG_STAGE" -ov -format UDZO "$DMG" >/dev/null
 hdiutil verify "$DMG" >/dev/null
 mkdir -p "$DMG_MOUNT"
 hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$DMG_MOUNT" -quiet
-if [[ ! -d "$DMG_MOUNT/汉化工作台.app" || ! -L "$DMG_MOUNT/Applications" ]]; then
+if [[ ! -d "$DMG_MOUNT/译台.app" || ! -L "$DMG_MOUNT/Applications" ]]; then
   echo "DMG is missing the app bundle or Applications shortcut" >&2
   exit 1
 fi
-codesign --verify --deep --strict "$DMG_MOUNT/汉化工作台.app"
+codesign --verify --deep --strict "$DMG_MOUNT/译台.app"
 hdiutil detach "$DMG_MOUNT" -quiet
 rm -rf "$DMG_MOUNT"
 
