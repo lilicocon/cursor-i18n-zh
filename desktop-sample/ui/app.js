@@ -85,7 +85,7 @@ function normalizeError(error) {
   return String(error);
 }
 
-function hasFirstRunConsent() {
+function hasLocalFirstRunConsent() {
   try {
     return window.localStorage.getItem(FIRST_RUN_CONSENT_KEY) === "accepted";
   } catch {
@@ -100,6 +100,10 @@ function saveFirstRunConsent() {
   } catch {
     return false;
   }
+}
+
+function hasFirstRunConsent() {
+  return hasLocalFirstRunConsent();
 }
 
 function showFirstRunDialog(required) {
@@ -122,20 +126,48 @@ function closeFirstRunDialog() {
   $("#firstRunBackdrop").classList.add("hidden");
 }
 
-function waitForFirstRunConsent() {
-  if (hasFirstRunConsent()) return Promise.resolve();
+async function waitForFirstRunConsent() {
+  if (invoke) {
+    try {
+      if (await invoke("has_first_run_consent")) {
+        saveFirstRunConsent();
+        return;
+      }
+    } catch (error) {
+      addLog("WARN", `读取首次启动确认失败: ${normalizeError(error)}`);
+    }
+    if (hasLocalFirstRunConsent()) {
+      try {
+        await invoke("accept_first_run_consent");
+        return;
+      } catch (error) {
+        addLog("WARN", `同步首次启动确认失败: ${normalizeError(error)}`);
+      }
+    }
+  } else if (hasLocalFirstRunConsent()) {
+    return;
+  }
   return new Promise((resolve) => {
     state.firstRunResolve = resolve;
     showFirstRunDialog(true);
   });
 }
 
-function acceptFirstRunConsent() {
+async function acceptFirstRunConsent() {
   if (!state.firstRunRequired) {
     closeFirstRunDialog();
     return;
   }
   if (!$("#firstRunConsentCheckbox").checked) return;
+  if (invoke) {
+    try {
+      await invoke("accept_first_run_consent");
+    } catch (error) {
+      addLog("WARN", `无法保存首次启动确认状态: ${normalizeError(error)}`);
+      showToast("无法保存首次启动确认, 请检查工作台数据目录权限.", "warning");
+      return;
+    }
+  }
   if (!saveFirstRunConsent()) {
     addLog("WARN", "无法保存首次启动确认状态, 下次启动时将再次显示声明.");
   }
@@ -674,10 +706,31 @@ function backupStatusTone(record) {
   return record.canRestore ? "restorable" : "historical";
 }
 
+function isProtectedAppInstall(path) {
+  const normalized = String(path || "").replace(/\\/g, "/");
+  if (!normalized) return false;
+  if (/\/Users\/[^/]+\/Applications\//i.test(normalized)) return false;
+  return /\/Applications\/[^/]+\.app(?:\/|$)/i.test(normalized)
+    || /\/WindowsApps\//i.test(normalized)
+    || /\/Program Files(?: \(x86\))?\//i.test(normalized);
+}
+
+function appNeedsElevation(app) {
+  if (!app || state.environment.isAdmin) return false;
+  if (app.id === "claude") return true;
+  return isProtectedAppInstall(app.path);
+}
+
+function recordNeedsElevation(record) {
+  if (!record || state.environment.isAdmin) return false;
+  if (record.appId === "claude") return true;
+  return appNeedsElevation(state.apps.find((item) => item.id === record.appId));
+}
+
 function restoreBlockedReason(record) {
   if (!record.valid) return record.detail || "备份完整性校验失败";
   if (!record.current) return record.detail || "备份版本与当前软件版本不匹配";
-  if (!state.environment.isAdmin && (record.appId === "claude" || state.environment.platform === "macos")) return "恢复应用资源需要授权";
+  if (recordNeedsElevation(record)) return "恢复应用资源需要授权";
   if (!$("#restoreConsentCheckbox").checked) return "请先确认已保存工作并同意关闭目标应用";
   return "";
 }
@@ -2989,7 +3042,7 @@ function updateActionButtons() {
     return;
   }
   const consent = $("#consentCheckbox").checked;
-  const needsAdmin = !state.environment.isAdmin && (app.id === "claude" || state.environment.platform === "macos");
+  const needsAdmin = appNeedsElevation(app);
   $("#previewButton").disabled = state.running || !app.ready;
   installButton.disabled = state.running || !app.ready || !app.backupAvailable || !consent || needsAdmin;
   restoreButton.disabled = state.running || !app.ready || !app.backupAvailable || !consent || needsAdmin;
@@ -3029,10 +3082,12 @@ function openModal(appId) {
     : "<strong>自动兼容引擎模式</strong><br>按资源结构发现新入口包, 安装前执行严格语法预检, 版本备份和事务化恢复.";
   updateModalBackupGate(app);
   renderLocales(app);
-  const needsAdmin = !state.environment.isAdmin && (appId === "claude" || state.environment.platform === "macos");
+  const needsAdmin = appNeedsElevation(app);
   $("#adminNote").classList.toggle("hidden", !needsAdmin);
   $("#adminNoteTitle").textContent = `${app.name} 安装需要授权`;
-  $("#adminNoteText").textContent = "写入「应用程序」或受保护的应用目录需要输入登录密码或使用触控 ID. 预检不需要授权, 安装和恢复请重新打开工作台.";
+  $("#adminNoteText").textContent = appId === "claude"
+    ? "写入「应用程序」或 WindowsApps 需要输入登录密码或使用触控 ID. 预检可在标准用户下完成, 安装和恢复请重新打开并授权."
+    : "当前 Cursor 安装在系统「应用程序」中, 写入资源需要授权. 用户目录下的 Cursor 不用授权.";
   $("#consentCheckbox").checked = false;
   $("#progressWrap").classList.add("hidden");
   $("#progressBar").style.width = "0%";

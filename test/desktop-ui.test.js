@@ -62,6 +62,12 @@ const release = fs.readFileSync(
   path.join(root, 'desktop-sample', 'src-tauri', 'src', 'release.rs'),
   'utf8',
 );
+const sessions = fs.readFileSync(
+  path.join(root, 'desktop-sample', 'src-tauri', 'src', 'sessions.rs'),
+  'utf8',
+);
+const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+const desktopReadme = fs.readFileSync(path.join(root, 'desktop-sample', 'README.md'), 'utf8');
 const securityCheck = fs.readFileSync(path.join(root, 'scripts', 'security-check.js'), 'utf8');
 const buildWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'build.yml'), 'utf8');
 const cursorCompatWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'cursor-compat.yml'), 'utf8');
@@ -404,9 +410,22 @@ test('desktop UI gates first launch before local or network initialization', () 
   assert.match(html, /软件声明/);
   assert.match(html, /隐私说明/);
   assert.match(script, /i18nWorkbench\.firstRunConsent\.v2/);
+  assert.match(script, /invoke\("has_first_run_consent"\)/);
+  assert.match(script, /invoke\("accept_first_run_consent"\)/);
+  assert.match(desktopMain, /fn has_first_run_consent/);
+  assert.match(desktopMain, /fn accept_first_run_consent/);
+  assert.match(desktopMain, /adapters::require_first_run_consent\(\)\?/);
+  assert.match(adapterMod, /first-run-consent/);
   assert.match(script, /if \(!browserPreviewSection\) await waitForFirstRunConsent\(\);\s*await refreshEnvironmentAndApps\(\);/);
   assert.match(script, /function canUseLocalPrivileges\(/);
   assert.match(script, /if \(!canUseLocalPrivileges\(\)\) return;/);
+  assert.match(script, /function appNeedsElevation\(/);
+  assert.match(script, /function isProtectedAppInstall\(/);
+  assert.doesNotMatch(script, /app\.id === "claude" \|\| state\.environment\.platform === "macos"/);
+  assert.match(sessions, /QUIT_FORCE_ATTEMPTS: u32 = 4/);
+  assert.match(readme, /Cursor 3\.16/);
+  assert.doesNotMatch(readme, /3\.11\.19/);
+  assert.doesNotMatch(desktopReadme, /Universal 双架构/);
   assert.match(script, /get\("preview"\)/);
   assert.match(script, /\["about", "extensions"\]\.includes\(requestedBrowserPreview\)/);
   assert.ok(

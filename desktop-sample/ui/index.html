@@ -308,7 +308,7 @@
               </label>
               <div class="session-actions">
                 <button id="sessionKillRemoteButton" class="secondary-button" disabled>结束远程控制工作进程</button>
-                <button id="sessionQuitButton" class="secondary-button" disabled>退出 Cursor</button>
+                <button id="sessionQuitButton" class="secondary-button" disabled title="先请求退出, 未退出则强制结束进程树">退出 Cursor</button>
                 <button id="sessionKillTreeButton" class="danger-button" disabled>结束全部进程</button>
                 <button id="sessionDetachChatsButton" class="secondary-button" disabled>把标错或卡住的对话改回本地</button>
                 <button id="sessionStartButton" class="primary-button" disabled>启动 Cursor</button>
@@ -852,7 +852,7 @@
                 <li>会话管理只枚举本机 Cursor 进程, 并只读对话索引的标题与云端标记, 不读取消息正文. 解除 Cloud Agent 标记必须先退出 Cursor, 并先备份 state.vscdb.</li>
                 <li>扩展管理只读取用户选择范围内的 MCP 与 Skill. MCP 密钥和请求头不返回前端, 配置修改前会创建本地备份.</li>
                 <li>版本检查只向本仓库 GitHub 请求公开发行版信息, 不携带 Cursor 或 Claude 账号信息, 不自动下载、不静默安装、不强制更新.</li>
-                <li>GitHub 头像仅在打开关于页时按需加载. 不同意本说明可以直接退出, 工作台不会继续初始化.</li>
+                <li>首次同意保存在本机工作台数据目录, 用量、会话、GitHub 和更新检查在未同意时不会执行. GitHub 头像仅在打开关于页时按需加载. 不同意本说明可以直接退出.</li>
               </ul>
             </article>
           </div>

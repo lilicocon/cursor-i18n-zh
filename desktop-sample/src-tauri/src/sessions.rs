@@ -5,8 +5,9 @@ use std::time::Duration;
 use crate::adapters;
 use crate::chats::{self, StuckChat};
 
-const POLL_ATTEMPTS: u32 = 8;
+const POLL_ATTEMPTS: u32 = 12;
 const POLL_INTERVAL_MS: u64 = 250;
+const QUIT_FORCE_ATTEMPTS: u32 = 4;
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -379,12 +380,21 @@ fn parse_ps_processes(output: &str) -> Vec<CursorProcess> {
 }
 
 fn quit_cursor(force: bool) -> Result<(), String> {
-    if force {
-        force_kill_cursor()?;
-    } else {
+    if !force {
         graceful_quit_cursor()?;
+        if wait_until(|processes| processes.is_empty()).is_ok() {
+            return Ok(());
+        }
     }
-    wait_until_idle(force)
+    let mut last = String::from("Cursor 进程仍未完全退出. 可改用结束全部进程, 或重新打开并授权后再试");
+    for _ in 0..QUIT_FORCE_ATTEMPTS {
+        force_kill_cursor()?;
+        match wait_until(|processes| processes.is_empty()) {
+            Ok(()) => return Ok(()),
+            Err(error) => last = error,
+        }
+    }
+    Err(last)
 }
 
 fn kill_remote_workers() -> Result<(), String> {
@@ -497,17 +507,6 @@ fn start_cursor_platform() -> Result<(), String> {
         .spawn()
         .map_err(|error| format!("无法启动 Cursor: {error}"))?;
     Ok(())
-}
-
-fn wait_until_idle(force: bool) -> Result<(), String> {
-    wait_until(|processes| processes.is_empty()).or_else(|error| {
-        if force {
-            Err(error)
-        } else {
-            force_kill_cursor()?;
-            wait_until(|processes| processes.is_empty())
-        }
-    })
 }
 
 fn wait_until(idle: impl Fn(&[CursorProcess]) -> bool) -> Result<(), String> {
