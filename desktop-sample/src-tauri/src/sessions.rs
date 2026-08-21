@@ -216,6 +216,7 @@ fn is_workbench_process(name: &str, command: &str) -> bool {
         || hay.contains("i18nworkbench")
         || hay.contains("cursor-i18n")
         || hay.contains("汉化工作台")
+        || hay.contains("译台")
 }
 
 fn is_cursor_process(name: &str, command: &str) -> bool {
@@ -584,7 +585,8 @@ mod tests {
     #[test]
     fn ignores_workbench_and_keeps_cursor_helpers() {
         assert!(!is_cursor_process("汉化工作台.exe", r"C:\Users\li\AppData\Local\I18nWorkbench\汉化工作台.exe"));
-        assert!(!is_cursor_process("i18n-workbench", "/Applications/汉化工作台.app/Contents/MacOS/i18n-workbench"));
+        assert!(!is_cursor_process("译台.exe", r"C:\Users\li\AppData\Local\I18nWorkbench\译台.exe"));
+        assert!(!is_cursor_process("i18n-workbench", "/Applications/译台.app/Contents/MacOS/i18n-workbench"));
         assert!(is_cursor_process("Cursor.exe", r"C:\Users\li\AppData\Local\Programs\Cursor\Cursor.exe"));
         assert!(is_cursor_process("Cursor Helper (GPU)", ""));
     }

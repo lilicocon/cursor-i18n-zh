@@ -167,7 +167,7 @@ fn find_install_root() -> Result<PathBuf, String> {
     {
         let app = find_app_bundle(&exe)?;
         if app.starts_with("/Volumes/") {
-            return Err("请先把「汉化工作台」拖到「应用程序」文件夹，再在应用内更新".to_string());
+            return Err("请先把「译台」拖到「应用程序」文件夹，再在应用内更新".to_string());
         }
         Ok(app)
     }
@@ -271,9 +271,11 @@ pub(crate) fn find_windows_payload_exe(payload: &Path) -> Result<PathBuf, String
 }
 
 pub(crate) fn find_macos_payload_app(payload: &Path) -> Result<PathBuf, String> {
-    let preferred = payload.join("汉化工作台.app");
-    if preferred.is_dir() {
-        return Ok(preferred);
+    for name in ["译台.app", "汉化工作台.app"] {
+        let preferred = payload.join(name);
+        if preferred.is_dir() {
+            return Ok(preferred);
+        }
     }
     let mut matches = Vec::new();
     for entry in fs::read_dir(payload).map_err(|error| format!("无法读取更新目录：{error}"))? {
@@ -366,7 +368,7 @@ fn extract_macos_dmg(dmg: &Path, dest: &Path) -> Result<(), String> {
             return Err("挂载更新包失败".to_string());
         }
         let app = find_macos_payload_app(&mount)?;
-        let staged = dest.join("汉化工作台.app");
+        let staged = dest.join("译台.app");
         let status = std::process::Command::new("ditto")
             .args([app.as_os_str(), staged.as_os_str()])
             .status()
@@ -558,6 +560,15 @@ mod tests {
     #[test]
     fn finds_macos_app_payload() {
         let dir = temp_dir();
+        fs::create_dir_all(dir.join("译台.app/Contents")).unwrap();
+        let found = find_macos_payload_app(&dir).unwrap();
+        assert_eq!(file_name(&found).unwrap(), "译台.app");
+        fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn finds_legacy_macos_app_payload() {
+        let dir = temp_dir();
         fs::create_dir_all(dir.join("汉化工作台.app/Contents")).unwrap();
         let found = find_macos_payload_app(&dir).unwrap();
         assert_eq!(file_name(&found).unwrap(), "汉化工作台.app");
@@ -622,14 +633,14 @@ mod tests {
     fn macos_helper_waits_then_ditto_and_open() {
         let script = macos_helper_script(
             99,
-            Path::new("/tmp/payload/汉化工作台.app"),
-            Path::new("/Applications/汉化工作台.app"),
+            Path::new("/tmp/payload/译台.app"),
+            Path::new("/Applications/译台.app"),
             Path::new("/tmp/updates"),
         );
         assert!(script.contains("pid=99"));
         assert!(script.contains("ditto"));
         assert!(script.contains("open"));
         assert!(script.contains("rm -rf \"$cache\""));
-        assert!(script.contains("/Applications/汉化工作台.app"));
+        assert!(script.contains("/Applications/译台.app"));
     }
 }

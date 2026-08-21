@@ -195,7 +195,7 @@ function stopCursor(options = {}) {
   }
 
   const detail = lastDetail ? ` 最后结果: ${lastDetail}` : '';
-  throw new Error(`已自动强制结束 Cursor 进程树, 但 Cursor 仍在运行. 请使用管理员身份重新启动汉化工作台后重试.${detail}`);
+  throw new Error(`已自动强制结束 Cursor 进程树, 但 Cursor 仍在运行. 请使用管理员身份重新启动译台后重试.${detail}`);
 }
 
 function invocationUserState(profile) {

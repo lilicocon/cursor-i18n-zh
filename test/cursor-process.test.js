@@ -35,7 +35,7 @@ test('reports an actionable error when Cursor keeps running after retries', () =
 
   assert.throws(
     () => stopCursor({ force: true, platform: 'win32', spawnSync, sleep: () => {}, log: () => {}, attempts: 2, pollsPerAttempt: 2, pollIntervalMs: 0 }),
-    /管理员身份重新启动汉化工作台/,
+    /管理员身份重新启动译台/,
 );
 
 test('quits Cursor gracefully and force-cleans remaining macOS process', () => {

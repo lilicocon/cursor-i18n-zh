@@ -90,7 +90,7 @@ function ensureReleaseNotes(from, to) {
     return;
   }
   const previous = read(`.github/releases/v${from}.md`);
-  const header = `# 汉化工作台 v${to}
+  const header = `# 译台 v${to}
 
 ## 下载
 
@@ -193,10 +193,10 @@ function check() {
   requireContains('desktop-sample/ui/app.js', `adapterVersion: "${version}"`, errors);
   requireContains('desktop-sample/ui/app.js', `currentVersion: "${version}"`, errors);
   requireContains('README.md', `localization-workbench-v${version}-`, errors);
-  requireContains('desktop-sample/README.md', `# 汉化工作台 v${version}`, errors);
+  requireContains('desktop-sample/README.md', `# 译台 v${version}`, errors);
   requireContains('CHANGELOG.md', `## [${version}]`, errors);
   requireContains('CHANGELOG.md', `[${version}]: https://github.com/lilicocon/cursor-i18n-zh/compare/`, errors);
-  requireContains(`.github/releases/v${version}.md`, `# 汉化工作台 v${version}`, errors);
+  requireContains(`.github/releases/v${version}.md`, `# 译台 v${version}`, errors);
   requireContains(`.github/releases/v${version}.md`, `localization-workbench-v${version}-`, errors);
   requireContains(`.github/releases/v${version}.md`, '## 已保留的安全能力', errors);
   requireContains(`.github/releases/v${version}.md`, '## 使用提醒', errors);
