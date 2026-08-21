@@ -55,6 +55,28 @@ test('Automations empty state, search default, and tips stay covered', () => {
   assert.match(text, /label:"事故与分诊"/);
 });
 
+test('marketplace browse chrome from Cursor 3.16 glass snippets becomes Chinese', () => {
+  const src = [
+    'lo=ns||m==="browse"?"Search Plugins, Skills, MCPs...":`Search ${P_n.find(Ri=>Ri.id===v)?.label??"items"} for ${Bo()}...`',
+    'v=m("all","All");b=m("cursor","Cursor Marketplace");y=u?m("personal","Personal"):null',
+    'const a=n?"Added":"Add";const c=s?"Adding...":"Add"',
+    'Zpi("span",{children:["Show ",g," more"]})',
+    'ik(kn,{size:"lg",weight:"medium",children:"Discover"})',
+    'van=[{key:"FEATURED",displayName:"Featured"},{key:"INFRASTRUCTURE",displayName:"Infrastructure"}]',
+  ].join('\n');
+  const { text } = patch(src);
+  assert.match(text, /\?"搜索插件、技能、MCP\.\.\."/);
+  assert.match(text, /m\("all","全部"\)/);
+  assert.match(text, /m\("cursor","Cursor 市场"\)/);
+  assert.match(text, /m\("personal","个人"\)/);
+  assert.match(text, /n\?"已添加":"添加"/);
+  assert.match(text, /s\?"正在添加\.\.\.":"添加"/);
+  assert.match(text, /children:\["显示 ",g," 个"\]/);
+  assert.match(text, /children:"发现"/);
+  assert.match(text, /displayName:"精选"/);
+  assert.match(text, /displayName:"基础设施"/);
+});
+
 test('does not translate usage matcher Set keys so server English still matches', () => {
   const src = 'const CJc=new Set(["Consumed by Auto. Additional usage consumes API quota.","Additional usage beyond limits consumes API quota or on-demand spend.","Additional usage beyond limits consumes API quota or on-demand usage."]);const show={autoBeyondLimitDescription:"Additional usage beyond limits consumes Other Models quota or on-demand spend."}';
   const { text } = patch(src);

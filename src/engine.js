@@ -138,6 +138,32 @@ function isPropLiteralContext(previous, props) {
   return isInsidePropArray(previous, props) || isTernaryPropValue(previous, props);
 }
 
+function zhFromBuckets(buckets, en) {
+  return buckets.prop.get(en) ?? buckets.lit.get(en);
+}
+
+// Marketplace chips/buttons put visible copy in call args or assignments
+// (`m("all","All")`, `n?"Added":"Add"`). Those are not prop context, and the
+// words are too short for a global lit. Rewrite only these exact pairs.
+function applyPairedUiLiterals(text, buckets, counts) {
+  const rules = [
+    { find: '("all","All")', ens: ['All'], build: (zh) => `("all","${zh[0]}")` },
+    { find: '("personal","Personal")', ens: ['Personal'], build: (zh) => `("personal","${zh[0]}")` },
+    { find: '?"Added":"Add"', ens: ['Added', 'Add'], build: (zh) => `?"${zh[0]}":"${zh[1]}"` },
+    { find: '?"Adding...":"Add"', ens: ['Adding...', 'Add'], build: (zh) => `?"${zh[0]}":"${zh[1]}"` },
+  ];
+  let output = text;
+  for (const rule of rules) {
+    const zh = rule.ens.map((en) => zhFromBuckets(buckets, en));
+    if (zh.some((value) => value === undefined) || !output.includes(rule.find)) continue;
+    const next = rule.build(zh);
+    const n = output.split(rule.find).length - 1;
+    output = output.split(rule.find).join(next);
+    for (const en of rule.ens) counts.set(en, (counts.get(en) || 0) + n);
+  }
+  return output;
+}
+
 function applyToText(text, entries) {
   const buckets = bucketEntries(entries);
   const htmlMatchers = buildHtmlMatchers(buckets);
@@ -211,20 +237,20 @@ function applyToText(text, entries) {
     if (previous.length > PROP_LOOKBEHIND) previous.shift();
   }
 
-  if (!replacements.length) return { text, counts, total: 0 };
-  let output = '';
-  let cursor = 0;
-  for (const item of replacements) {
-    output += text.slice(cursor, item.start);
-    output += item.text;
-    cursor = item.end;
+  let output = text;
+  if (replacements.length) {
+    output = '';
+    let cursor = 0;
+    for (const item of replacements) {
+      output += text.slice(cursor, item.start);
+      output += item.text;
+      cursor = item.end;
+    }
+    output += text.slice(cursor);
   }
-  output += text.slice(cursor);
-  return {
-    text: output,
-    counts,
-    total: [...counts.values()].reduce((sum, count) => sum + count, 0),
-  };
+  output = applyPairedUiLiterals(output, buckets, counts);
+  const total = [...counts.values()].reduce((sum, count) => sum + count, 0);
+  return { text: output, counts, total };
 }
 
 module.exports = { applyToText, defaultCtx };

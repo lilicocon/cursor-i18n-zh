@@ -260,3 +260,45 @@ test('keeps assigned ternaries as literals unless the entry allows lit', () => {
   assert.match(text, /"运行诊断"/);
   assert.doesNotThrow(() => new vm.Script(text));
 });
+
+test('rewrites marketplace chip and add-button pairs without global short-word lits', () => {
+  const dict = new Map([
+    ['All', { zh: '全部', ctx: ['prop'] }],
+    ['Personal', { zh: '个人', ctx: ['prop'] }],
+    ['Add', { zh: '添加', ctx: ['prop'] }],
+    ['Added', { zh: '已添加', ctx: ['prop'] }],
+    ['Adding...', { zh: '正在添加...', ctx: ['prop'] }],
+  ]);
+  const src = [
+    'v=m("all","All");',
+    'y=m("personal","Personal");',
+    'const a=n?"Added":"Add";',
+    'const c=s?"Adding...":"Add";',
+    'const other="All";',
+    'const verb="Add";',
+  ].join('');
+  const { text, total } = applyToText(src, dict);
+
+  assert.equal(total, 6);
+  assert.match(text, /m\("all","全部"\)/);
+  assert.match(text, /m\("personal","个人"\)/);
+  assert.match(text, /n\?"已添加":"添加"/);
+  assert.match(text, /s\?"正在添加\.\.\.":"添加"/);
+  assert.match(text, /other="All"/);
+  assert.match(text, /verb="Add"/);
+  assert.doesNotThrow(() => new vm.Script(text));
+});
+
+test('translates split show-more children without touching templates', () => {
+  const dict = new Map([
+    ['Show ', { zh: '显示 ', ctx: ['prop'] }],
+    [' more', { zh: ' 个', ctx: ['prop'] }],
+  ]);
+  const src = 'el({children:["Show ",n," more"]});const q=`Show ${n} more`;';
+  const { text, total } = applyToText(src, dict);
+
+  assert.equal(total, 2);
+  assert.match(text, /children:\["显示 ",n," 个"\]/);
+  assert.match(text, /`Show \$\{n\} more`/);
+  assert.doesNotThrow(() => new vm.Script(text));
+});
