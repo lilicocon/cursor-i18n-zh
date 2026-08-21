@@ -33,11 +33,13 @@ const PROPS = [
   'autoBeyondLimitDescription', 'autoUsageBarLabel', 'apiUsageBarLabel',
   'protectionDescription', 'pillLabel', 'trayLabel', 'ctaLabel',
   'collectionLabel', 'primaryLabel', 'secondaryLabel',
+  'emptyTitle', 'emptyDescription', 'createButton', 'pageTitle',
+  'newAutomationButtonLabel', 'nameColumn', 'disabledReason',
   // Cursor 设置导航使用 tab id 作为属性名, 对应值仍是可见标题.
   'general', 'profile', 'vscode-settings', 'appearance', 'fun', 'plan-usage',
   'chat', 'browser', 'tab', 'models', 'git-prs', 'rules', 'plugins', 'customize',
   'indexing', 'mcp', 'hooks', 'beta', 'network', 'background-composer',
-  'self-driving', 'worktrees', 'developer', 'docs', 'contact',
+  'self-driving', 'worktrees', 'developer', 'docs', 'contact', 'automations',
 ];
 
 // html-attr 上下文: SolidJS/模板 HTML 里可翻译的属性.

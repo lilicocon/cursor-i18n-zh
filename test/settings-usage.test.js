@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const vm = require('node:vm');
 
-const { embedAccountUsage, INJECTION_MARKER } = require('../src/settings-usage');
+const { embedAccountUsage, expandUsageMatcherSets, INJECTION_MARKER } = require('../src/settings-usage');
 
 function fixture() {
   return [
@@ -71,4 +71,17 @@ test('embeds Cursor 3.16 React plan usage below the General account section', ()
   const second = embedAccountUsage(result.text);
   assert.equal(second.injected, false);
   assert.equal(second.reason, 'already-present');
+});
+
+test('adds the short on-demand spend matcher Cursor started sending', () => {
+  const set = '["Consumed by Auto. Additional usage consumes API quota.","Additional usage beyond limits consumes API quota or on-demand spend.","Additional usage beyond limits consumes API quota or on-demand usage."]';
+  const src = `const CJc=new Set(${set});`;
+  const first = expandUsageMatcherSets(src);
+  const second = expandUsageMatcherSets(first.text);
+
+  assert.equal(first.expanded, true);
+  assert.match(first.text, /on-demand spend\."\]/);
+  assert.equal(second.expanded, false);
+  assert.equal(second.text, first.text);
+  assert.equal(expandUsageMatcherSets('const untouched=1;').expanded, false);
 });
