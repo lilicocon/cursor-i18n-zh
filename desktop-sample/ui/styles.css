@@ -416,7 +416,8 @@ h1 { margin: 0; font-size: 36px; line-height: 1.1; letter-spacing: -0.03em; font
 .usage-model-heading h3 { margin: 0; font-size: 13px; }
 .usage-model-heading p { margin: 4px 0 0; color: var(--muted-foreground); font-size: 9px; }
 .usage-model-heading > span { color: var(--brand); font-size: 9px; }
-.usage-tabs { margin-bottom: 14px; width: fit-content; }
+.usage-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.usage-tabs { margin-bottom: 0; width: fit-content; }
 .usage-panel.hidden { display: none; }
 .usage-sync-note { margin: 0 0 14px; padding: 10px 12px; border: 1px solid rgba(245, 158, 11, .22); border-radius: 10px; background: rgba(245, 158, 11, .08); color: #b45309; font-size: 12px; line-height: 1.5; }
 .usage-sync-note.hidden { display: none; }

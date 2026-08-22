@@ -4,6 +4,7 @@ const state = {
   usage: null,
   usageLoading: false,
   usageTab: "overview",
+  usageProduct: "cursor",
   sessions: null,
   sessionsLoading: false,
   sessionAction: "",
@@ -332,6 +333,46 @@ function browserFallbackBackups() {
       current: true, canRestore: true, status: "可恢复", detail: "完整性校验通过, 与当前安装版本匹配",
     },
   ];
+}
+
+function browserFallbackClaudeUsage() {
+  return {
+    available: true,
+    accountEmail: "preview@example.com",
+    fiveHourPercent: 23,
+    sevenDayPercent: 41,
+    fiveHourReset: "2026-08-22T18:00:00Z",
+    sevenDayReset: "2026-08-25T09:00:00Z",
+    requestTotal: 2,
+    tokenTotal: 198,
+    inputTokens: 110,
+    outputTokens: 70,
+    cacheWriteTokens: 4,
+    cacheReadTokens: 14,
+    desktopSessions: 1,
+    cliSessions: 1,
+    desktopTokens: 158,
+    cliTokens: 40,
+    eventTotal: 2,
+    eventTruncated: false,
+    notes: [
+      "中转台账（NPCR / CC / UC）只统计经过它的请求. 官方 Claude 桌面客户端默认走 Anthropic, 那些台账看不到桌面用量.",
+      "这里只读官方客户端写下的本机记录, 不估算 Token, 也不把会话正文送出 Rust.",
+    ],
+    refreshedAtUnix: Math.floor(Date.now() / 1000),
+    models: [
+      { name: "claude-sonnet-4", requests: 1, inputTokens: 100, outputTokens: 50, cacheWriteTokens: 0, cacheReadTokens: 8, tokens: 158, desktopTokens: 158, cliTokens: 0 },
+      { name: "claude-opus-4", requests: 1, inputTokens: 10, outputTokens: 20, cacheWriteTokens: 4, cacheReadTokens: 6, tokens: 40, desktopTokens: 0, cliTokens: 40 },
+    ],
+    days: [
+      { date: "2026-08-21", desktopRequests: 1, cliRequests: 0, inputTokens: 100, outputTokens: 50, tokens: 158 },
+      { date: "2026-08-20", desktopRequests: 0, cliRequests: 1, inputTokens: 10, outputTokens: 20, tokens: 40 },
+    ],
+    events: [
+      { timestampMs: Date.now() - 3600000, model: "claude-sonnet-4", source: "desktop", inputTokens: 100, outputTokens: 50, tokens: 158 },
+      { timestampMs: Date.now() - 7200000, model: "claude-opus-4", source: "cli", inputTokens: 10, outputTokens: 20, tokens: 40 },
+    ],
+  };
 }
 
 function browserFallbackUsage() {
@@ -888,6 +929,59 @@ function setUsageTab(tab) {
   });
 }
 
+function setUsageProduct(product) {
+  if (state.usageProduct === product && state.usage) return;
+  state.usageProduct = product;
+  $$("[data-usage-product]").forEach((button) => {
+    const active = button.dataset.usageProduct === product;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  applyUsageChrome(product);
+  loadUsage();
+}
+
+function setColumnLabels(node, labels) {
+  if (!node) return;
+  node.replaceChildren(...labels.map((label) => {
+    const span = document.createElement("span");
+    span.textContent = label;
+    return span;
+  }));
+}
+
+function applyUsageChrome(product) {
+  const claude = product === "claude";
+  $("#usageTitle").textContent = claude ? "Claude 用量监控" : "Cursor 用量监控";
+  $("#usageSubtitle").textContent = claude
+    ? "读官方 Claude 桌面客户端和 Claude Code 写下的本机记录. 中转台账看不到官方桌面流量. 令牌不回传前端."
+    : "套餐汇总来自 Cursor 官方用量接口; 按天和模型明细优先同步网页请求记录, 令牌不回传前端.";
+  $("#usageCardPlanLabel").textContent = claude ? "官方额度快照" : "当前套餐";
+  $("#usageCardAmountLabel").textContent = claude ? "本机 Token" : "套餐用量";
+  $("#usageCardRequestLabel").textContent = claude ? "本机会话" : "模型请求";
+  $("#usageProgressLabel").textContent = claude ? "5 小时窗口" : "本计费周期使用进度";
+  $("#usageDailyDescription").textContent = claude
+    ? "按 UTC 日期汇总官方 JSONL 里的桌面客户端和 CLI 用量."
+    : "按 UTC 日期汇总网页请求记录中的套餐内用量和 API / 按量用量.";
+  $("#usageEventsHeading").textContent = claude ? "本机请求记录" : "网页请求记录";
+  $("#usageEventsDescription").textContent = claude
+    ? "只显示模型、来源和 Token. 会话正文留在本机 JSONL, 不进入前端."
+    : "同步 cursor.com 用量页的计费事件, 含模型、套餐/API 池和 Token.";
+  setColumnLabels($("#usageModelColumns"), claude
+    ? ["模型", "请求", "输入", "输出", "合计"]
+    : ["模型", "请求", "套餐 Token", "API Token", "合计"]);
+  setColumnLabels($("#usageDayColumns"), claude
+    ? ["日期", "桌面请求", "CLI 请求", "输入", "输出", "合计"]
+    : ["日期", "套餐请求", "API 请求", "套餐 Token", "API Token", "计费"]);
+  setColumnLabels($("#usageEventColumns"), claude
+    ? ["时间", "模型", "来源", "输入", "输出", "合计"]
+    : ["时间", "模型", "池", "Token", "计费", "来源"]);
+}
+
+function claudeSourceLabel(value) {
+  return value === "desktop" ? "桌面客户端" : "CLI";
+}
+
 function renderUsage(usage) {
   state.usage = usage;
   $("#usageError").classList.add("hidden");
@@ -1000,26 +1094,139 @@ function renderUsage(usage) {
   }
 }
 
+function renderClaudeUsage(usage) {
+  state.usage = usage;
+  $("#usageError").classList.add("hidden");
+  $("#usageContent").classList.remove("loading");
+  const five = usage.fiveHourPercent;
+  const seven = usage.sevenDayPercent;
+  $("#usageMembership").textContent = five == null && seven == null ? "无官方快照" : "官方本机快照";
+  $("#usageAccount").textContent = usage.accountEmail || "未读取到 Claude 账户邮箱";
+  $("#usagePlanAmount").textContent = formatNumber(usage.tokenTotal);
+  $("#usageRemaining").textContent = `输入 ${formatNumber(usage.inputTokens)} · 输出 ${formatNumber(usage.outputTokens)} · 缓存读 ${formatNumber(usage.cacheReadTokens)}`;
+  $("#usageRequests").textContent = `${formatNumber(usage.desktopSessions)} / ${formatNumber(usage.cliSessions)}`;
+  $("#usageTokens").textContent = `桌面 Token ${formatNumber(usage.desktopTokens)} · CLI ${formatNumber(usage.cliTokens)}`;
+
+  const percent = Math.max(0, Math.min(100, Number(five) || 0));
+  $("#usagePercent").textContent = five == null ? "--" : `${formatNumber(percent, 1)}%`;
+  $("#usageMeterBar").style.width = `${percent}%`;
+  $("#usageApiPercent").textContent = seven == null ? "7 天额度 --" : `7 天额度 ${formatNumber(seven, 1)}%`;
+  $("#usagePoolTokens").textContent = `缓存写 ${formatNumber(usage.cacheWriteTokens)} · 请求 ${formatNumber(usage.requestTotal)}`;
+  $("#usageCycle").textContent = usage.fiveHourReset ? `重置 ${formatCycleDate(usage.fiveHourReset)}` : "无 5 小时重置时间";
+  $("#usageRefreshedAt").textContent = `刷新于 ${formatBackupTime({ createdAtUnix: usage.refreshedAtUnix })}`;
+
+  const notes = Array.isArray(usage.notes) ? usage.notes.filter(Boolean) : [];
+  const note = $("#usageEventsNote");
+  if (notes.length) {
+    note.textContent = notes.join(" ");
+    note.classList.remove("hidden");
+  } else {
+    note.classList.add("hidden");
+    note.textContent = "";
+  }
+  $("#usageModelSource").textContent = usage.available
+    ? "已按官方本机 JSONL 汇总. 桌面 Code 通过 cliSessionId 对到同一批记录."
+    : "还没有读到官方本机用量记录.";
+
+  const models = Array.isArray(usage.models) ? usage.models : [];
+  $("#usageModelCount").textContent = `${models.length} 个模型`;
+  const list = $("#usageModelList");
+  list.replaceChildren();
+  if (!models.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-row";
+    empty.textContent = "官方 JSONL 里还没有模型用量.";
+    list.appendChild(empty);
+  } else {
+    for (const model of models) {
+      const row = document.createElement("div");
+      row.className = "usage-model-row usage-model-row-wide";
+      row.innerHTML = "<strong></strong><span></span><span></span><span></span><span></span>";
+      row.querySelector("strong").textContent = model.name;
+      const values = row.querySelectorAll("span");
+      values[0].textContent = formatNumber(model.requests);
+      values[1].textContent = formatNumber(model.inputTokens);
+      values[2].textContent = formatNumber(model.outputTokens);
+      values[3].textContent = formatNumber(model.tokens);
+      list.appendChild(row);
+    }
+  }
+
+  const days = Array.isArray(usage.days) ? usage.days : [];
+  $("#usageDayCount").textContent = `${days.length} 天`;
+  const dayList = $("#usageDayList");
+  dayList.replaceChildren();
+  if (!days.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-row";
+    empty.textContent = "还没有按天的官方本机记录.";
+    dayList.appendChild(empty);
+  } else {
+    for (const day of days) {
+      const row = document.createElement("div");
+      row.className = "usage-day-row";
+      row.innerHTML = "<strong></strong><span></span><span></span><span></span><span></span><span></span>";
+      row.querySelector("strong").textContent = day.date;
+      const values = row.querySelectorAll("span");
+      values[0].textContent = formatNumber(day.desktopRequests);
+      values[1].textContent = formatNumber(day.cliRequests);
+      values[2].textContent = formatNumber(day.inputTokens);
+      values[3].textContent = formatNumber(day.outputTokens);
+      values[4].textContent = formatNumber(day.tokens);
+      dayList.appendChild(row);
+    }
+  }
+
+  const events = Array.isArray(usage.events) ? usage.events : [];
+  $("#usageEventCount").textContent = `${events.length} 条`;
+  const eventList = $("#usageEventList");
+  eventList.replaceChildren();
+  if (!events.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-row";
+    empty.textContent = "还没有本机请求记录.";
+    eventList.appendChild(empty);
+    return;
+  }
+  for (const event of events) {
+    const row = document.createElement("div");
+    row.className = "usage-event-row";
+    row.innerHTML = "<strong></strong><span></span><span></span><span></span><span></span><span></span>";
+    row.querySelector("strong").textContent = formatEventTime(event.timestampMs);
+    const values = row.querySelectorAll("span");
+    values[0].textContent = event.model;
+    values[1].textContent = claudeSourceLabel(event.source);
+    values[2].textContent = formatNumber(event.inputTokens);
+    values[3].textContent = formatNumber(event.outputTokens);
+    values[4].textContent = formatNumber(event.tokens);
+    eventList.appendChild(row);
+  }
+}
+
 async function loadUsage() {
   if (!canUseLocalPrivileges()) return;
   if (state.usageLoading) return;
   state.usageLoading = true;
+  const product = state.usageProduct === "claude" ? "claude" : "cursor";
   const button = $("#refreshUsageButton");
   button.disabled = true;
   button.classList.add("scanning");
   $("#usageContent").classList.add("loading");
   $("#usageError").classList.add("hidden");
   try {
-    const usage = invoke ? await invoke("cursor_usage") : browserFallbackUsage();
-    renderUsage(usage);
-    addLog("DONE", "Cursor 用量数据已刷新.");
+    const usage = invoke
+      ? await invoke(product === "claude" ? "claude_usage" : "cursor_usage")
+      : product === "claude" ? browserFallbackClaudeUsage() : browserFallbackUsage();
+    if (product === "claude") renderClaudeUsage(usage);
+    else renderUsage(usage);
+    addLog("DONE", product === "claude" ? "Claude 用量数据已刷新." : "Cursor 用量数据已刷新.");
   } catch (error) {
     const message = normalizeError(error);
     state.usage = null;
     $("#usageContent").classList.remove("loading");
     $("#usageError").textContent = message;
     $("#usageError").classList.remove("hidden");
-    addLog("WARN", `Cursor 用量读取失败: ${message}`);
+    addLog("WARN", `${product === "claude" ? "Claude" : "Cursor"} 用量读取失败: ${message}`);
   } finally {
     state.usageLoading = false;
     button.disabled = false;
@@ -3553,6 +3760,9 @@ $$(".backup-action[data-backup-app]").forEach((button) => button.addEventListene
 $("#scanButton").addEventListener("click", refreshEnvironmentAndApps);
 $("#nodeRuntimeRefreshButton").addEventListener("click", refreshEnvironmentAndApps);
 $("#refreshUsageButton").addEventListener("click", loadUsage);
+$$("[data-usage-product]").forEach((button) => {
+  button.addEventListener("click", () => setUsageProduct(button.dataset.usageProduct));
+});
 $$("[data-usage-tab]").forEach((button) => {
   button.addEventListener("click", () => setUsageTab(button.dataset.usageTab));
 });
