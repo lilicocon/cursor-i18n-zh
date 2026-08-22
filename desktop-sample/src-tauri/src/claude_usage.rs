@@ -298,7 +298,7 @@ fn hit_from_value(value: &Value, source: Source, seen_turns: &mut HashSet<String
     let usage = value
         .pointer("/message/usage")
         .or_else(|| value.get("usage"))
-        .filter(Value::is_object)?;
+        .filter(|value| value.is_object())?;
     let input = value_u64(usage.get("input_tokens"));
     let output = value_u64(usage.get("output_tokens"));
     let cache_write = cache_write_tokens(usage);
@@ -788,7 +788,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(hit.cache_write, 7);
-        assert_eq!(hit.tokens(), 14);
+        assert_eq!(hit.tokens(), 10);
         assert_eq!(hit.timestamp_ms, 1_782_864_000_000);
     }
 

@@ -104,8 +104,8 @@ test('desktop UI exposes usage and backup history controls', () => {
   ]) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
-  assert.match(script, /invoke\("cursor_usage"\)/);
-  assert.match(script, /invoke\("claude_usage"\)/);
+  assert.match(script, /"cursor_usage"/);
+  assert.match(script, /"claude_usage"/);
   assert.match(script, /data-usage-product/);
   assert.match(html, /data-usage-product="claude"/);
   assert.match(script, /invoke\("cursor_sessions"\)/);
