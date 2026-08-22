@@ -12,11 +12,13 @@ mod network;
 mod release;
 mod self_update;
 mod sessions;
+mod claude_usage;
 mod usage;
 
 use adapters::{
     ActionRequest, AppStatus, BackupRecord, EnvironmentStatus, OperationResult, ProgressSink,
 };
+use claude_usage::ClaudeUsageOverview;
 use release::UpdateStatus;
 use sessions::{CursorSessionOverview, SessionActionRequest};
 use tauri::{AppHandle, Emitter};
@@ -55,6 +57,14 @@ async fn list_backups() -> Result<Vec<BackupRecord>, String> {
 async fn cursor_usage() -> Result<UsageOverview, String> {
     adapters::require_first_run_consent()?;
     tauri::async_runtime::spawn_blocking(usage::load_cursor_usage)
+        .await
+        .map_err(|error| format!("用量读取线程异常: {error}"))?
+}
+
+#[tauri::command]
+async fn claude_usage() -> Result<ClaudeUsageOverview, String> {
+    adapters::require_first_run_consent()?;
+    tauri::async_runtime::spawn_blocking(crate::claude_usage::load_claude_usage)
         .await
         .map_err(|error| format!("用量读取线程异常: {error}"))?
 }
@@ -618,6 +628,7 @@ fn main() {
             environment_status,
             list_backups,
             cursor_usage,
+            claude_usage,
             cursor_sessions,
             manage_cursor_session,
             check_for_updates,

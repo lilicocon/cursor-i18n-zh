@@ -83,6 +83,7 @@ const cursorReleaseMacos = fs.readFileSync(
 test('desktop UI exposes usage and backup history controls', () => {
   for (const id of [
     'refreshUsageButton',
+    'usageTitle',
     'usageContent',
     'usageModelList',
     'usageDailyTab',
@@ -104,6 +105,9 @@ test('desktop UI exposes usage and backup history controls', () => {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
   assert.match(script, /invoke\("cursor_usage"\)/);
+  assert.match(script, /invoke\("claude_usage"\)/);
+  assert.match(script, /data-usage-product/);
+  assert.match(html, /data-usage-product="claude"/);
   assert.match(script, /invoke\("cursor_sessions"\)/);
   assert.match(script, /invoke\("manage_cursor_session"/);
   assert.match(script, /confirm: action !== "refresh"/);
@@ -114,12 +118,19 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(desktopMain, /mod sessions;/);
   assert.match(desktopMain, /cursor_sessions,/);
   assert.match(desktopMain, /manage_cursor_session,/);
+  assert.match(desktopMain, /mod claude_usage;/);
+  assert.match(desktopMain, /claude_usage,/);
   const usageRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'usage.rs'), 'utf8');
+  const claudeUsageRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'claude_usage.rs'), 'utf8');
   const sessionsRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'sessions.rs'), 'utf8');
   const chatsRs = fs.readFileSync(path.join(root, 'desktop-sample', 'src-tauri', 'src', 'chats.rs'), 'utf8');
   assert.match(usageRs, /api\/dashboard\/get-filtered-usage-events/);
   assert.match(usageRs, /Origin.*cursor\.com/);
   assert.match(usageRs, /fn classify_pool/);
+  assert.match(claudeUsageRs, /claude-code-sessions/);
+  assert.match(claudeUsageRs, /cliSessionId/);
+  assert.match(claudeUsageRs, /cachedUsageUtilization/);
+  assert.doesNotMatch(claudeUsageRs, /content\.to_string\(\)/);
   assert.match(sessionsRs, /kill-remote/);
   assert.match(sessionsRs, /remote-control/);
   assert.match(sessionsRs, /detach-chats/);

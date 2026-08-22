@@ -89,6 +89,7 @@
 - 在写入前生成完整补丁计划, 校验 JavaScript 语法, NLS 占位符和词典歧义.
 - 将 Cursor 原生套餐和用量区域保留在账号设置中, 并提供独立用量监控页.
 - 用量页同步网页请求记录, 按天、套餐内 / API 按量和模型展示 Token, 不在本地另做一套估算.
+- 同一页可切换到 Claude: 统计官方桌面客户端和 Claude Code 写下的本机 Token, 中转台账看不到的桌面流量也能对上.
 - 会话管理页列出本机 Cursor 进程、远程控制工作进程, 以及被标成 Cloud Agent 的对话; 标错或卡住且云端已不在跑的条目可在退出后改回本地.
 
 ### Claude Desktop
@@ -141,6 +142,7 @@ app/resources/ion-dist/i18n/dynamic/en-US.json
 - 关于页在下载过程中显示实时进度和当前阶段, 无 Content-Length 时仍显示累计下载 MB 数.
 - GitHub 项目、扩展市场、版本检查和更新下载会对 HTTP 500/502/503/504、超时及短暂连接失败执行有限重试, 403/404 等永久错误不会重复请求.
 - 用量页同步 cursor.com 请求记录, 按天、套餐内 / API 按量和模型展示 Token.
+- Claude 用量读官方本机 JSONL、桌面 `claude-code-sessions` 索引和 `~/.claude.json` 额度快照, 不估算 Token, 不回传会话正文.
 - 会话页列出本机 Cursor 进程和远程控制工作进程, 确认后可结束占用或重新启动.
 - 在独立扩展管理页维护 Cursor 与 Claude Code 的 MCP, Skill 和提示词, 支持用户级与项目级作用域及 GitHub 更新检查.
 - 扩展检查与市场安装显示统一进度反馈; 键盘遵循 macOS 习惯: Esc 关闭面板, ⌘/Ctrl+W 关闭当前面板或窗口, ⌘/Ctrl+R 重新扫描, ⌘/Ctrl+M 最小化, 方向键切换 Tab, 并为焦点和减少动态效果提供无障碍适配.
@@ -272,6 +274,13 @@ macOS 构建由 GitHub Actions 的 `macos-14` Runner 按架构分别生成:
 - GitHub 版本检查只发送公开发行版请求, 不携带 Cursor 或 Claude 账号信息.
 - 会话管理枚举本机 Cursor 进程, 并只读对话索引的标题与云端标记, 不读取消息正文.
 - 解除错误的 Cloud Agent 标记必须先退出 Cursor, 先备份 `state.vscdb`, 只改本机索引; 不会改云端会话, 也不会让该对话重新变成远程控制.
+
+## Claude 用量与隐私
+
+- 只读官方客户端已经写下的本机记录: `~/.claude/projects/**/*.jsonl`、`~/.config/claude/projects`、桌面 `claude-code-sessions` / `local-agent-mode-sessions`, 以及 `~/.claude.json` 里的额度快照.
+- 桌面 Code 会话通过 `local_*.json` 的 `cliSessionId` 标成桌面来源; 中转台账（NPCR / CC / UC）默认看不到这条官方桌面流量.
+- 前端只接收汇总数字、模型、日期和来源. 会话标题和正文留在 Rust, 不回传、不写日志、不发到第三方.
+- 不估算 Token. Chat / Cowork 若没落本地 usage, 这里没有条数; 完整账号额度看 Claude 设置里的官方用量页.
 
 ## 命令行和开发验证
 

@@ -535,7 +535,7 @@ fn days_from_events(events: &[UsageEvent]) -> Vec<DailyUsage> {
     days.into_values().rev().collect()
 }
 
-fn utc_date(timestamp_ms: u64) -> String {
+pub(crate) fn utc_date(timestamp_ms: u64) -> String {
     let (year, month, day) = utc_ymd((timestamp_ms / 86_400_000) as i64);
     format!("{year:04}-{month:02}-{day:02}")
 }
@@ -560,7 +560,7 @@ fn iso_to_millis(value: Option<&str>) -> Option<u64> {
     parse_iso_millis(value?)
 }
 
-fn parse_iso_millis(value: &str) -> Option<u64> {
+pub(crate) fn parse_iso_millis(value: &str) -> Option<u64> {
     if let Ok(millis) = value.parse::<u64>() {
         return Some(if millis < 1_000_000_000_000 {
             millis * 1000
@@ -606,7 +606,7 @@ fn now_millis() -> u64 {
         .as_millis() as u64
 }
 
-fn value_f64(value: Option<&Value>) -> f64 {
+pub(crate) fn value_f64(value: Option<&Value>) -> f64 {
     value
         .and_then(|value| {
             value
@@ -616,7 +616,7 @@ fn value_f64(value: Option<&Value>) -> f64 {
         .unwrap_or(0.0)
 }
 
-fn value_u64(value: Option<&Value>) -> u64 {
+pub(crate) fn value_u64(value: Option<&Value>) -> u64 {
     value
         .and_then(|value| {
             value

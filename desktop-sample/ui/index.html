@@ -180,35 +180,41 @@
           <section id="usage" class="usage-section scroll-anchor">
             <div class="section-heading usage-heading">
               <div>
-                <h2>Cursor 用量监控</h2>
-                <p>套餐汇总来自 Cursor 官方用量接口; 按天和模型明细优先同步网页请求记录, 令牌不回传前端.</p>
+                <h2 id="usageTitle">Cursor 用量监控</h2>
+                <p id="usageSubtitle">套餐汇总来自 Cursor 官方用量接口; 按天和模型明细优先同步网页请求记录, 令牌不回传前端.</p>
               </div>
               <button id="refreshUsageButton" class="secondary-button"><span>↻</span>刷新用量</button>
             </div>
 
             <div id="usageError" class="usage-error hidden"></div>
             <div id="usageContent" class="usage-content loading">
-              <div class="usage-tabs extension-segment compact" role="tablist" aria-label="用量视图">
-                <button id="usageOverviewTab" class="active" data-usage-tab="overview" role="tab" aria-selected="true">概览</button>
-                <button id="usageDailyTab" data-usage-tab="daily" role="tab" aria-selected="false">按天</button>
-                <button id="usageEventsTab" data-usage-tab="events" role="tab" aria-selected="false">请求记录</button>
+              <div class="usage-toolbar">
+                <div class="extension-segment compact" role="tablist" aria-label="用量产品">
+                  <button class="active" data-usage-product="cursor" role="tab" aria-selected="true">Cursor</button>
+                  <button data-usage-product="claude" role="tab" aria-selected="false">Claude</button>
+                </div>
+                <div class="usage-tabs extension-segment compact" role="tablist" aria-label="用量视图">
+                  <button id="usageOverviewTab" class="active" data-usage-tab="overview" role="tab" aria-selected="true">概览</button>
+                  <button id="usageDailyTab" data-usage-tab="daily" role="tab" aria-selected="false">按天</button>
+                  <button id="usageEventsTab" data-usage-tab="events" role="tab" aria-selected="false">请求记录</button>
+                </div>
               </div>
               <p id="usageEventsNote" class="usage-sync-note hidden"></p>
 
               <div id="usageOverviewPanel" class="usage-panel" data-usage-panel="overview">
                 <div class="usage-card-grid">
                   <article class="usage-card plan-card">
-                    <span>当前套餐</span>
+                    <span id="usageCardPlanLabel">当前套餐</span>
                     <strong id="usageMembership">正在读取</strong>
                     <small id="usageAccount">等待 Cursor 登录状态</small>
                   </article>
                   <article class="usage-card">
-                    <span>套餐用量</span>
+                    <span id="usageCardAmountLabel">套餐用量</span>
                     <strong id="usagePlanAmount">-- / --</strong>
                     <small id="usageRemaining">剩余 --</small>
                   </article>
                   <article class="usage-card">
-                    <span>模型请求</span>
+                    <span id="usageCardRequestLabel">模型请求</span>
                     <strong id="usageRequests">--</strong>
                     <small id="usageTokens">Token --</small>
                   </article>
@@ -216,7 +222,7 @@
 
                 <article class="usage-overview-card">
                   <div class="usage-progress-heading">
-                    <div><span>本计费周期使用进度</span><small id="usageCycle">--</small></div>
+                    <div><span id="usageProgressLabel">本计费周期使用进度</span><small id="usageCycle">--</small></div>
                     <strong id="usagePercent">0%</strong>
                   </div>
                   <div class="usage-meter"><div id="usageMeterBar"></div></div>
@@ -232,7 +238,7 @@
                     <div><h3>模型明细</h3><p id="usageModelSource">有请求记录时按网页账单汇总, 否则显示周期接口.</p></div>
                     <span id="usageModelCount">0 个模型</span>
                   </div>
-                  <div class="usage-model-columns" aria-hidden="true">
+                  <div id="usageModelColumns" class="usage-model-columns" aria-hidden="true">
                     <span>模型</span><span>请求</span><span>套餐 Token</span><span>API Token</span><span>合计</span>
                   </div>
                   <div id="usageModelList" class="usage-model-list">
@@ -244,10 +250,10 @@
               <div id="usageDailyPanel" class="usage-panel hidden" data-usage-panel="daily">
                 <article class="usage-model-card">
                   <div class="usage-model-heading">
-                    <div><h3>按天统计</h3><p>按 UTC 日期汇总网页请求记录中的套餐内用量和 API / 按量用量.</p></div>
+                    <div><h3>按天统计</h3><p id="usageDailyDescription">按 UTC 日期汇总网页请求记录中的套餐内用量和 API / 按量用量.</p></div>
                     <span id="usageDayCount">0 天</span>
                   </div>
-                  <div class="usage-day-columns" aria-hidden="true">
+                  <div id="usageDayColumns" class="usage-day-columns" aria-hidden="true">
                     <span>日期</span><span>套餐请求</span><span>API 请求</span><span>套餐 Token</span><span>API Token</span><span>计费</span>
                   </div>
                   <div id="usageDayList" class="usage-model-list">
@@ -259,10 +265,10 @@
               <div id="usageEventsPanel" class="usage-panel hidden" data-usage-panel="events">
                 <article class="usage-model-card">
                   <div class="usage-model-heading">
-                    <div><h3>网页请求记录</h3><p>同步 cursor.com 用量页的计费事件, 含模型、套餐/API 池和 Token.</p></div>
+                    <div><h3 id="usageEventsHeading">网页请求记录</h3><p id="usageEventsDescription">同步 cursor.com 用量页的计费事件, 含模型、套餐/API 池和 Token.</p></div>
                     <span id="usageEventCount">0 条</span>
                   </div>
-                  <div class="usage-event-columns" aria-hidden="true">
+                  <div id="usageEventColumns" class="usage-event-columns" aria-hidden="true">
                     <span>时间</span><span>模型</span><span>池</span><span>Token</span><span>计费</span><span>来源</span>
                   </div>
                   <div id="usageEventList" class="usage-model-list">
@@ -625,7 +631,7 @@
                   </div>
                   <div><h3>lilicocon / 汉化工作台</h3><p>Cursor 与 Claude Desktop 本地化管理工具</p></div>
                 </div>
-                <p class="about-description">提供版本备份, 完整性校验, 汉化安装, 原版恢复, Cursor 用量监控和会话管理. 所有本机修改流程均可审计.</p>
+                <p class="about-description">提供版本备份, 完整性校验, 汉化安装, 原版恢复, Cursor / Claude 用量监控和会话管理. 所有本机修改流程均可审计.</p>
                 <code class="about-repository">github.com/lilicocon/cursor-i18n-zh</code>
                 <div class="about-actions">
                   <button class="primary-button github-button" data-project-page="repository">
@@ -690,6 +696,7 @@
                   <li>本项目是第三方开源工具, 与 Cursor、Anthropic 及其关联公司无官方关系.</li>
                   <li>汉化会修改本机应用资源, 安装前必须完成对应版本备份和 SHA256 校验.</li>
                   <li>Cursor 用量监控只向 Cursor 自有接口查询周期汇总和网页请求记录, 登录令牌不返回前端、不写日志、不落盘.</li>
+                  <li>Claude 用量监控只读本机官方 JSONL、桌面会话索引和额度快照, 不读取会话正文, 不把 Claude 登录态发到第三方.</li>
                   <li>会话管理只读取本机 Cursor 进程和对话索引标题. 解除 Cloud Agent 标记会先备份 state.vscdb, 且必须先退出 Cursor; 不会改云端会话, 也不会读取消息正文.</li>
                   <li>MCP 密钥、环境变量和请求头只在 Rust 后端处理, 前端仅显示脱敏字段, 修改前自动备份配置.</li>
                   <li>更新检查只读取本仓库 GitHub 正式发行版信息, 检查时不自动下载、不静默安装、不强制更新. 安装只在你点击后进行, 永不强制更新.</li>
@@ -849,6 +856,7 @@
                 <li>工作台不包含遥测、行为分析或广告组件, 不上传个人文件、备份内容和操作日志.</li>
                 <li>软件检测、备份、校验和恢复均在本机执行. 备份只保存在界面显示的本地目录.</li>
                 <li>Cursor 用量监控只读本机登录状态. 令牌仅在 Rust 后端内存中使用, 只发送给 Cursor 自有接口查询周期汇总和网页请求记录, 不返回前端、不写日志、不落盘.</li>
+                <li>Claude 用量监控只读本机官方 JSONL、桌面会话索引和 ~/.claude.json 额度快照. 不读取会话正文, 不发送 Claude 登录态, 不估算 Token.</li>
                 <li>会话管理只枚举本机 Cursor 进程, 并只读对话索引的标题与云端标记, 不读取消息正文. 解除 Cloud Agent 标记必须先退出 Cursor, 并先备份 state.vscdb.</li>
                 <li>扩展管理只读取用户选择范围内的 MCP 与 Skill. MCP 密钥和请求头不返回前端, 配置修改前会创建本地备份.</li>
                 <li>版本检查只向本仓库 GitHub 请求公开发行版信息, 不携带 Cursor 或 Claude 账号信息, 检查时不自动下载、不静默安装、不强制更新. 安装只在你点击后进行.</li>
