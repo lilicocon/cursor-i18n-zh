@@ -102,7 +102,7 @@ app/resources/ion-dist/i18n/en-US.json
 app/resources/ion-dist/i18n/dynamic/en-US.json
 ```
 
-- 内嵌 19276 条简体中文翻译记忆, 安装前统计命中并校验生成 JSON.
+- 内嵌 22678 条简体中文翻译记忆, 安装前统计命中并校验生成 JSON. 资源结构通过后按命中条数显示覆盖率, 不宣称 100% 界面覆盖.
 
 ### Cursor 与 Claude Code 扩展管理
 
@@ -219,9 +219,9 @@ macOS 自动兼容流程由独立工作流 `cursor-compat-macos.yml` 执行, 行
 
 Claude Desktop 适配流程:
 
-1. 读取系统已注册安装包并选择最新版本.
+1. 读取本机已安装目录并选择最新版本: Windows 优先 `%LOCALAPPDATA%\AnthropicClaude\app-*`, 同时兼容 AppX / WindowsApps; macOS 使用 `Claude.app`; Linux 官方包使用 `/usr/lib/claude-desktop/resources`.
 2. 只接受同时存在 3 个目标 JSON 的安装目录.
-3. 验证 JSON 结构和可翻译字符串后才允许备份与安装.
+3. 验证 JSON 结构、可翻译字符串和翻译记忆命中后才允许备份与安装.
 4. 为当前包版本创建独立备份, 禁止将旧版本备份恢复到新版本.
 
 自动兼容可以覆盖资源结构保持一致的大多数升级. 如果上游移动资源, 改变 JSON 结构或不再提供可补丁入口, 界面会显示“结构待适配”并阻止安装. 这种安全停止是预期行为, 不能承诺上游任意架构重写后仍无需更新适配器或词典.
@@ -324,7 +324,7 @@ GitHub Actions 会并行执行四种架构的构建: Windows x64、Windows ARM64
 实际内嵌或随包分发的第三方资源:
 
 - [Stack-Cairn/LiveAgent](https://github.com/Stack-Cairn/LiveAgent): LINUX DO 社区宣传图来源. 本仓库基于固定提交 `bca31978de9e23501c618f0fa4dca38d2e69f202` 保存原图到 `assets/community/linuxdo.png`, README 使用仓库内相对路径引用. 来源仓库使用 MIT License, LINUX DO 名称与标识归其权利人所有.
-- [GMYXDS/claude-desktop-zh-simple](https://github.com/GMYXDS/claude-desktop-zh-simple): Claude Desktop 简体中文翻译记忆来源. 本项目固定内嵌快照 `20260711180535`, 共 19276 条映射, 遵守 Apache-2.0. 来源说明和完整许可证保存在 `desktop-sample/resources/claude/SOURCE.md` 与 `desktop-sample/resources/claude/APACHE-2.0.txt`.
+- [GMYXDS/claude-desktop-zh-simple](https://github.com/GMYXDS/claude-desktop-zh-simple): Claude Desktop 简体中文翻译记忆来源. 本项目固定内嵌快照 `20260730035926`, 共 22678 条映射, 遵守 Apache-2.0. 来源说明和完整许可证保存在 `desktop-sample/resources/claude/SOURCE.md` 与 `desktop-sample/resources/claude/APACHE-2.0.txt`.
 - [Acorn](https://github.com/acornjs/acorn): JavaScript 语法分析运行时, MIT.
 - [OpenCC-JS](https://github.com/nk2028/opencc-js): 简繁转换运行时, MIT 与 Apache-2.0. OpenCC 字典数据遵守 Apache-2.0.
 - [Tauri](https://github.com/tauri-apps/tauri): 桌面 GUI 框架, MIT 或 Apache-2.0.

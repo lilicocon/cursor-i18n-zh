@@ -50,7 +50,7 @@ ion-dist/i18n/dynamic/en-US.json
 https://github.com/GMYXDS/claude-desktop-zh-simple
 ```
 
-内嵌版本为 `20260711180535`, 共 19276 条, 遵守 Apache-2.0. 查看 `resources/claude/SOURCE.md` 和 `resources/claude/APACHE-2.0.txt`.
+内嵌版本为 `20260730035926`, 共 22678 条, 遵守 Apache-2.0. 查看 `resources/claude/SOURCE.md` 和 `resources/claude/APACHE-2.0.txt`.
 
 以下项目仅用于实现调研和设计参考, 未复制代码, 图标, 翻译文件或发行资源:
 
@@ -69,9 +69,9 @@ Microsoft 官方 Cursor 中文语言包仅通过 Cursor CLI 按需安装或读�
 
 ## Claude Desktop 运行条件
 
-- 安装 Windows 或 macOS 版 Claude Desktop.
+- 安装 Windows、macOS 或官方 Linux 版 Claude Desktop.
 - 安全预检不需要管理员权限.
-- 安装和恢复 WindowsApps 或 `/Applications/Claude.app` 中的资源时, 使用界面的“重新打开并授权”按钮.
+- 安装和恢复 WindowsApps、`/Applications/Claude.app` 或 `/usr/lib/claude-desktop` 中的资源时, 使用界面的“重新打开并授权”按钮. `%LOCALAPPDATA%\AnthropicClaude` 用户目录安装不用授权.
 - Cursor 装在用户目录时不用授权; 只有系统 `/Applications/Cursor.app` 才需要授权.
 - 设置 `CLAUDE_RESOURCES_DIR` 可指定自定义 `app/resources` 目录.
 - Windows 备份保存到 `%LOCALAPPDATA%\I18nWorkbench`, macOS 保存到 `~/Library/Application Support/I18nWorkbench`.

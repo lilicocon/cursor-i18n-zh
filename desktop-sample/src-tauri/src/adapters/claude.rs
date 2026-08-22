@@ -13,8 +13,8 @@ use std::path::{Path, PathBuf};
 use std::process::Output;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-const ADAPTER_VERSION: &str = "0.1.0";
-const MEMORY_VERSION: &str = "20260711180535";
+const ADAPTER_VERSION: &str = "0.1.1";
+const MEMORY_VERSION: &str = "20260730035926";
 const TRANSLATION_MEMORY: &str = include_str!("../../../resources/claude/translation_memory.json");
 const RESOURCE_FILES: [&str; 3] = [
     "en-US.json",
@@ -98,32 +98,37 @@ pub fn detect() -> AppStatus {
             };
             let state = read_state(&root, &install).unwrap_or_default();
             let localized = state.current_state == "patched";
+            let (auto_compatible, compatibility_message) =
+                claude_compatibility(&root, &install, localized);
             AppStatus {
                 id: "claude",
                 name: "Claude Desktop",
                 description: "轻量 JSON 资源汉化",
                 installed: true,
-                ready: true,
+                ready: auto_compatible || localized,
                 path: Some(install.resources.to_string_lossy().into_owned()),
                 icon_data_url: icons::data_url_for_claude(Some(&install.install_location)),
                 version: Some(install.version.clone()),
                 state: if localized {
                     "已汉化".to_string()
-                } else {
+                } else if auto_compatible {
                     "适配器可用".to_string()
+                } else {
+                    "结构待适配".to_string()
                 },
-                state_tone: "success",
+                state_tone: if auto_compatible || localized {
+                    "success"
+                } else {
+                    "warning"
+                },
                 adapter_version: ADAPTER_VERSION,
                 backup_available,
                 backup_path: Some(backup.to_string_lossy().into_owned()),
                 backup_files,
                 backup_message,
                 localized,
-                auto_compatible: true,
-                compatibility_message: format!(
-                    "已按资源结构自动适配 Claude Desktop {}, 3 个 JSON 已通过结构校验",
-                    install.version
-                ),
+                auto_compatible,
+                compatibility_message,
                 reason: None,
                 locales: vec![LocaleOption {
                     id: "zh-cn",
@@ -494,6 +499,53 @@ fn load_translation_memory() -> Result<HashMap<String, String>, String> {
         return Err("翻译记忆库为空".to_string());
     }
     Ok(memory)
+}
+
+fn claude_compatibility(
+    root: &Path,
+    install: &ClaudeInstall,
+    localized: bool,
+) -> (bool, String) {
+    if localized {
+        return (
+            true,
+            format!(
+                "已按资源结构适配 Claude Desktop {}, 当前 3 个 JSON 已汉化",
+                install.version
+            ),
+        );
+    }
+    let source = source_root(root, install).unwrap_or_else(|_| install.resources.clone());
+    match load_translation_memory().and_then(|memory| preview_resources(&source, &memory)) {
+        Ok(stats) => compatibility_summary(&install.version, &stats),
+        Err(error) => (
+            false,
+            format!(
+                "已找到 Claude Desktop {}, 但资源预检失败: {error}",
+                install.version
+            ),
+        ),
+    }
+}
+
+fn compatibility_summary(version: &str, stats: &[(String, TranslationStats)]) -> (bool, String) {
+    let replacements: usize = stats.iter().map(|(_, stat)| stat.replaced).sum();
+    let total: usize = stats.iter().map(|(_, stat)| stat.total_strings).sum();
+    if replacements == 0 {
+        return (
+            false,
+            format!(
+                "已找到 Claude Desktop {version}, 3 个 JSON 结构可识别, 但翻译记忆库未命中任何条文案, 已停止自动适配"
+            ),
+        );
+    }
+    let percent = replacements.saturating_mul(100) / total.max(1);
+    (
+        true,
+        format!(
+            "已按资源结构适配 Claude Desktop {version}, 3 个 JSON 可替换 {replacements}/{total} 条 ({percent}%)"
+        ),
+    )
 }
 
 fn preview_resources(
@@ -978,9 +1030,9 @@ fn stop_claude() -> Result<(), String> {
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn stop_claude() -> Result<(), String> {
-    let _ = hidden_command("pkill")
-        .args(["-9", "-x", "Claude"])
-        .status();
+    for name in ["claude-desktop", "Claude"] {
+        let _ = hidden_command("pkill").args(["-9", "-x", name]).status();
+    }
     Ok(())
 }
 
@@ -994,6 +1046,24 @@ fn resolve_install() -> Result<ClaudeInstall, String> {
 
 #[cfg(target_os = "windows")]
 fn resolve_platform_install() -> Result<ClaudeInstall, String> {
+    let mut found = Vec::new();
+    let mut structure_error = None;
+
+    for install_location in unpackaged_claude_dirs(&local_app_data().join("AnthropicClaude")) {
+        let resources = install_location.join("resources");
+        consider_install(
+            &mut found,
+            &mut structure_error,
+            install_location.clone(),
+            resources,
+            version_from_path(&install_location),
+            install_location
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "AnthropicClaude".to_string()),
+        );
+    }
+
     let script = "$p=Get-AppxPackage -Name Claude -ErrorAction SilentlyContinue | Sort-Object Version -Descending | Select-Object -First 1; if ($p) { [Console]::OutputEncoding=[Text.UTF8Encoding]::new(); Write-Output $p.InstallLocation; Write-Output $p.Version; Write-Output $p.PackageFullName }";
     if let Ok(output) = hidden_command("powershell.exe")
         .args(["-NoProfile", "-NonInteractive", "-Command", script])
@@ -1008,30 +1078,25 @@ fn resolve_platform_install() -> Result<ClaudeInstall, String> {
                 .collect::<Vec<_>>();
             if let Some(location) = lines.first() {
                 let install_location = PathBuf::from(location);
-                let resources = install_location.join("app").join("resources");
                 let version = lines
                     .get(1)
                     .cloned()
                     .unwrap_or_else(|| version_from_path(Path::new(location)));
-                validate_resource_structure(&resources).map_err(|error| {
-                    format!(
-                        "已找到最新 Claude Desktop {version}, 但资源结构不兼容: {error}. 已停止自动适配"
-                    )
-                })?;
-                return Ok(ClaudeInstall {
-                    install_location,
-                    resources,
+                consider_install(
+                    &mut found,
+                    &mut structure_error,
+                    install_location.clone(),
+                    install_location.join("app").join("resources"),
                     version,
-                    package_name: lines
+                    lines
                         .get(2)
                         .cloned()
                         .unwrap_or_else(|| "Claude".to_string()),
-                });
+                );
             }
         }
     }
 
-    let mut candidates = Vec::new();
     let windows_apps = std::env::var_os("ProgramFiles")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(r"C:\Program Files"))
@@ -1040,36 +1105,34 @@ fn resolve_platform_install() -> Result<ClaudeInstall, String> {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
             if name.starts_with("Claude_") && name.ends_with("__pzs8sxrjxfjjc") {
-                candidates.push(entry.path());
+                let install_location = entry.path();
+                consider_install(
+                    &mut found,
+                    &mut structure_error,
+                    install_location.clone(),
+                    install_location.join("app").join("resources"),
+                    version_from_path(&install_location),
+                    name,
+                );
             }
         }
     }
-    candidates.sort_by_key(|path| version_parts(&version_from_path(path)));
-    candidates.reverse();
-    for install_location in candidates {
-        let resources = install_location.join("app").join("resources");
-        let version = version_from_path(&install_location);
-        validate_resource_structure(&resources).map_err(|error| {
-            format!(
-                "已找到最新 Claude Desktop {version}, 但资源结构不兼容: {error}. 已停止自动适配"
-            )
-        })?;
-        return Ok(ClaudeInstall {
-            version,
-            package_name: install_location
-                .file_name()
-                .map(|name| name.to_string_lossy().into_owned())
-                .unwrap_or_else(|| "Claude".to_string()),
-            install_location,
-            resources,
-        });
-    }
 
     let local_candidate = local_app_data().join("Programs/Claude/resources");
-    if validate_resource_structure(&local_candidate).is_ok() {
-        return install_from_resources(local_candidate, "Claude".to_string());
+    if local_candidate.is_dir() {
+        match install_from_resources(local_candidate, "Claude".to_string()) {
+            Ok(install) => found.push(install),
+            Err(error) => {
+                if structure_error.is_none() {
+                    structure_error = Some(format!(
+                        "已找到最新 Claude Desktop, 但资源结构不兼容: {error}. 已停止自动适配"
+                    ));
+                }
+            }
+        }
     }
-    Err("未找到 Claude Desktop 的 3 个目标资源文件".to_string())
+
+    newest_install(found, structure_error)
 }
 
 #[cfg(target_os = "macos")]
@@ -1112,7 +1175,104 @@ fn resolve_platform_install() -> Result<ClaudeInstall, String> {
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn resolve_platform_install() -> Result<ClaudeInstall, String> {
-    Err("当前平台尚未提供 Claude Desktop 安装目录适配".to_string())
+    let mut found = Vec::new();
+    let mut structure_error = None;
+    for resources in linux_resource_candidates() {
+        if !resources.is_dir() {
+            continue;
+        }
+        let install_location = resources
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| resources.clone());
+        let version = linux_package_version()
+            .unwrap_or_else(|| version_from_path(&install_location));
+        consider_install(
+            &mut found,
+            &mut structure_error,
+            install_location,
+            resources,
+            version,
+            "claude-desktop".to_string(),
+        );
+    }
+    newest_install(found, structure_error)
+}
+
+#[allow(dead_code)]
+fn linux_resource_candidates() -> Vec<PathBuf> {
+    vec![
+        PathBuf::from("/usr/lib/claude-desktop/resources"),
+        PathBuf::from("/opt/claude-desktop/resources"),
+    ]
+}
+
+#[allow(dead_code)]
+fn linux_package_version() -> Option<String> {
+    hidden_command("dpkg-query")
+        .args(["-W", "-f", "${Version}", "claude-desktop"])
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .filter(|value| {
+            !value.is_empty() && value.chars().next().is_some_and(|ch| ch.is_ascii_digit())
+        })
+}
+
+fn unpackaged_claude_dirs(root: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = fs::read_dir(root) else {
+        return Vec::new();
+    };
+    let mut dirs = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with("app-"))
+                && path.join("resources").is_dir()
+        })
+        .collect::<Vec<_>>();
+    dirs.sort_by_key(|path| version_parts(&version_from_path(path)));
+    dirs.reverse();
+    dirs
+}
+
+fn consider_install(
+    found: &mut Vec<ClaudeInstall>,
+    structure_error: &mut Option<String>,
+    install_location: PathBuf,
+    resources: PathBuf,
+    version: String,
+    package_name: String,
+) {
+    match validate_resource_structure(&resources) {
+        Ok(_) => found.push(ClaudeInstall {
+            install_location,
+            resources,
+            version,
+            package_name,
+        }),
+        Err(error) => {
+            if structure_error.is_none() {
+                *structure_error = Some(format!(
+                    "已找到最新 Claude Desktop {version}, 但资源结构不兼容: {error}. 已停止自动适配"
+                ));
+            }
+        }
+    }
+}
+
+fn newest_install(
+    mut found: Vec<ClaudeInstall>,
+    structure_error: Option<String>,
+) -> Result<ClaudeInstall, String> {
+    found.sort_by(|left, right| version_parts(&left.version).cmp(&version_parts(&right.version)));
+    found.pop().ok_or_else(|| {
+        structure_error
+            .unwrap_or_else(|| "未找到 Claude Desktop 的 3 个目标资源文件".to_string())
+    })
 }
 
 #[cfg(target_os = "macos")]
@@ -1252,6 +1412,11 @@ fn version_from_path(path: &Path) -> String {
         .file_name()
         .map(|name| name.to_string_lossy())
         .unwrap_or_default();
+    if let Some(rest) = name.strip_prefix("app-") {
+        if !rest.is_empty() && rest.chars().next().is_some_and(|ch| ch.is_ascii_digit()) {
+            return rest.to_string();
+        }
+    }
     name.strip_prefix("Claude_")
         .and_then(|value| value.split('_').next())
         .filter(|value| !value.is_empty())
@@ -1259,7 +1424,6 @@ fn version_from_path(path: &Path) -> String {
         .to_string()
 }
 
-#[cfg(target_os = "windows")]
 fn version_parts(version: &str) -> Vec<u64> {
     version
         .split('.')
@@ -1336,6 +1500,131 @@ mod tests {
         let detail = command_failure_detail(&output);
         assert!(detail.contains("Some(7)"));
         assert!(detail.contains("takeown diagnostic"));
+    }
+
+    #[test]
+    fn reads_unpackaged_and_appx_versions_from_folder_name() {
+        assert_eq!(
+            version_from_path(Path::new(
+                r"C:\Users\li\AppData\Local\AnthropicClaude\app-1.34493.1"
+            )),
+            "1.34493.1"
+        );
+        assert_eq!(
+            version_from_path(Path::new(
+                r"C:\Program Files\WindowsApps\Claude_1.24012.9.0_x64__pzs8sxrjxfjjc"
+            )),
+            "1.24012.9.0"
+        );
+        assert_eq!(version_parts("1.10.0") > version_parts("1.2.3"), true);
+    }
+
+    #[test]
+    fn finds_newest_unpackaged_anthropic_claude_dir() {
+        let root = sandbox();
+        let older = root.join("app-1.2.3");
+        let newer = root.join("app-1.10.0");
+        let ignored = root.join("cache");
+        fs::create_dir_all(older.join("resources")).unwrap();
+        fs::create_dir_all(newer.join("resources")).unwrap();
+        fs::create_dir_all(ignored.join("resources")).unwrap();
+        let found = unpackaged_claude_dirs(&root);
+        assert_eq!(found, vec![newer, older]);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn compatibility_summary_reports_hit_rate_without_claiming_full_coverage() {
+        let (ok, message) = compatibility_summary(
+            "1.34493.1",
+            &[
+                (
+                    "en-US.json".to_string(),
+                    TranslationStats {
+                        total_strings: 10,
+                        replaced: 8,
+                        unmatched: 2,
+                    },
+                ),
+                (
+                    "ion-dist/i18n/en-US.json".to_string(),
+                    TranslationStats {
+                        total_strings: 90,
+                        replaced: 70,
+                        unmatched: 20,
+                    },
+                ),
+            ],
+        );
+        assert!(ok);
+        assert!(message.contains("78/100 条 (78%)"));
+        assert!(message.contains("1.34493.1"));
+
+        let (empty_ok, empty_message) = compatibility_summary("1.0.0", &[(
+            "en-US.json".to_string(),
+            TranslationStats {
+                total_strings: 4,
+                replaced: 0,
+                unmatched: 4,
+            },
+        )]);
+        assert!(!empty_ok);
+        assert!(empty_message.contains("未命中"));
+    }
+
+    #[test]
+    fn official_linux_resource_candidates_are_stable() {
+        let paths = linux_resource_candidates();
+        assert!(paths.iter().any(|path| path.ends_with("usr/lib/claude-desktop/resources")));
+        assert!(paths.iter().any(|path| path.ends_with("opt/claude-desktop/resources")));
+        let _ = linux_package_version();
+    }
+
+    #[test]
+    fn preview_hits_official_linux_resources_when_present() {
+        let resources = Path::new("/tmp/claude-review/extract/usr/lib/claude-desktop/resources");
+        if !resources.join("en-US.json").is_file() {
+            return;
+        }
+        let memory = load_translation_memory().unwrap();
+        let stats = preview_resources(resources, &memory).unwrap();
+        let replacements: usize = stats.iter().map(|(_, stat)| stat.replaced).sum();
+        let total: usize = stats.iter().map(|(_, stat)| stat.total_strings).sum();
+        assert!(total > 20_000, "unexpected official resource size: {total}");
+        assert!(
+            replacements * 100 / total >= 80,
+            "official 1.34493 coverage too low: {replacements}/{total}"
+        );
+        let (ok, message) = compatibility_summary("1.34493.1", &stats);
+        assert!(ok);
+        assert!(message.contains("条"));
+    }
+
+    #[test]
+    fn newest_install_prefers_higher_version_over_structure_error() {
+        let root = sandbox();
+        write_resources(&root.join("ok/resources"));
+        let mut found = Vec::new();
+        let mut structure_error = None;
+        consider_install(
+            &mut found,
+            &mut structure_error,
+            root.join("ok"),
+            root.join("ok/resources"),
+            "1.10.0".to_string(),
+            "ok".to_string(),
+        );
+        consider_install(
+            &mut found,
+            &mut structure_error,
+            root.join("broken"),
+            root.join("missing"),
+            "1.99.0".to_string(),
+            "broken".to_string(),
+        );
+        let install = newest_install(found, structure_error).unwrap();
+        assert_eq!(install.version, "1.10.0");
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]

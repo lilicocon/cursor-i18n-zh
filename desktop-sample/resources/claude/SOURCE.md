@@ -1,6 +1,6 @@
 # Claude Desktop 简体中文翻译记忆库
 
-- 固定使用 `translation_memory.json` 内嵌版本 `20260711180535`.
+- 固定使用 `translation_memory.json` 内嵌版本 `20260730035926`.
 - 保留来源: https://github.com/GMYXDS/claude-desktop-zh-simple.
 - 遵守 `APACHE-2.0.txt`.
 - 只将英文 JSON 字符串值精确映射为简体中文.

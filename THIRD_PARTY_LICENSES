@@ -8,7 +8,7 @@ are fixed by package-lock.json and desktop-sample/src-tauri/Cargo.lock.
 Claude Desktop translation memory
 ---------------------------------
 Source: https://github.com/GMYXDS/claude-desktop-zh-simple
-Embedded snapshot: 20260711180535, 19276 English-to-Simplified-Chinese mappings
+Embedded snapshot: 20260730035926, 22678 English-to-Simplified-Chinese mappings
 License: Apache License 2.0
 Source notice: desktop-sample/resources/claude/SOURCE.md
 Full license: desktop-sample/resources/claude/APACHE-2.0.txt

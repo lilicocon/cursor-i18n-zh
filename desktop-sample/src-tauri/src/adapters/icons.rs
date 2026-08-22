@@ -123,6 +123,8 @@ fn claude_icon_candidates(root: &Path) -> Vec<PathBuf> {
         root.join("Assets/Square150x150Logo.png"),
         root.join("app/resources/icon.png"),
         root.join("resources/icon.png"),
+        PathBuf::from("/usr/share/icons/hicolor/128x128/apps/claude-desktop.png"),
+        PathBuf::from("/usr/share/icons/hicolor/256x256/apps/claude-desktop.png"),
     ]);
     candidates
 }

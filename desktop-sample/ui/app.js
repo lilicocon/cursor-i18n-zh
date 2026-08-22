@@ -714,18 +714,18 @@ function isProtectedAppInstall(path) {
   if (/\/Users\/[^/]+\/Applications\//i.test(normalized)) return false;
   return /\/Applications\/[^/]+\.app(?:\/|$)/i.test(normalized)
     || /\/WindowsApps\//i.test(normalized)
-    || /\/Program Files(?: \(x86\))?\//i.test(normalized);
+    || /\/Program Files(?: \(x86\))?\//i.test(normalized)
+    || /\/usr\/lib\//i.test(normalized)
+    || /\/opt\//i.test(normalized);
 }
 
 function appNeedsElevation(app) {
   if (!app || state.environment.isAdmin) return false;
-  if (app.id === "claude") return true;
   return isProtectedAppInstall(app.path);
 }
 
 function recordNeedsElevation(record) {
   if (!record || state.environment.isAdmin) return false;
-  if (record.appId === "claude") return true;
   return appNeedsElevation(state.apps.find((item) => item.id === record.appId));
 }
 
@@ -3108,7 +3108,7 @@ function openModal(appId) {
   $("#adminNote").classList.toggle("hidden", !needsAdmin);
   $("#adminNoteTitle").textContent = `${app.name} 安装需要授权`;
   $("#adminNoteText").textContent = appId === "claude"
-    ? "写入「应用程序」或 WindowsApps 需要输入登录密码或使用触控 ID. 预检可在标准用户下完成, 安装和恢复请重新打开并授权."
+    ? "写入「应用程序」、WindowsApps 或 /usr/lib 需要授权. 用户目录下的 AnthropicClaude 不用授权. 预检可在标准用户下完成."
     : "当前 Cursor 安装在系统「应用程序」中, 写入资源需要授权. 用户目录下的 Cursor 不用授权.";
   $("#consentCheckbox").checked = false;
   $("#progressWrap").classList.add("hidden");
