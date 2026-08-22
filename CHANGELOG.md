@@ -2,6 +2,17 @@
 
 本文件记录正式发布版本. `v0.3.2` 至 `v0.3.5` 是 `v0.3.6` 发布前的内部迭代, 未单独创建 GitHub Release.
 
+## [0.4.9] - 2026-08-22
+
+### 新增
+
+- Claude Desktop / 官方 Claude Code 桌面客户端补全简体: 识别 Windows `%LOCALAPPDATA%\AnthropicClaude\app-*` 和 Linux `/usr/lib/claude-desktop`, 三个 `en-US.json` 按官方 1.34493.1 替换文案, 上游「您」改为「你」, JS 里有 ID 但不在 locale 文件中的句子写入 `ion-dist/i18n/en-US.json`. 远程或网页界面、asar 硬编码和终端 CLI 仍不在范围内.
+
+### 改进
+
+- 补齐 Cursor Automations、Customize、提示和设置页剩余漏翻.
+- 兼容性探测对照 Cursor 3.17.8.
+
 ## [0.4.8] - 2026-08-20
 
 ### 新增
@@ -297,6 +308,7 @@
 - 改进 NLS 合并, 繁体转换和 JavaScript tokenizer 替换引擎.
 - 增加 CI 词典检查, ZIP 冒烟测试和 GitHub Release 自动发布.
 
+[0.4.9]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/lilicocon/cursor-i18n-zh/compare/v0.4.5...v0.4.6
