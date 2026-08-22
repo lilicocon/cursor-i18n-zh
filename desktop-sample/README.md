@@ -50,7 +50,7 @@ ion-dist/i18n/dynamic/en-US.json
 https://github.com/GMYXDS/claude-desktop-zh-simple
 ```
 
-内嵌版本为 `20260730035926`, 共 22678 条, 遵守 Apache-2.0. 查看 `resources/claude/SOURCE.md` 和 `resources/claude/APACHE-2.0.txt`.
+内嵌上游版本为 `20260730035926`, 共 22678 条, 遵守 Apache-2.0. 官方 1.34493.1 其余条文案在 `resources/claude/translation_memory_overlay.json` (`20260822143000`). 查看 `resources/claude/SOURCE.md` 和 `resources/claude/APACHE-2.0.txt`.
 
 以下项目仅用于实现调研和设计参考, 未复制代码, 图标, 翻译文件或发行资源:
 

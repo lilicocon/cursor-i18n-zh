@@ -15,9 +15,10 @@ use std::process::Output;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const ADAPTER_VERSION: &str = "0.1.1";
-const MEMORY_VERSION: &str = "20260730035926";
+const ADAPTER_VERSION: &str = "0.1.2";
+const MEMORY_VERSION: &str = "20260822143000";
 const TRANSLATION_MEMORY: &str = include_str!("../../../resources/claude/translation_memory.json");
+const TRANSLATION_OVERLAY: &str = include_str!("../../../resources/claude/translation_memory_overlay.json");
 const RESOURCE_FILES: [&str; 3] = [
     "en-US.json",
     "ion-dist/i18n/en-US.json",
@@ -495,8 +496,11 @@ fn claude_backup_record(path: &Path, current_install: Option<&ClaudeInstall>) ->
 }
 
 fn load_translation_memory() -> Result<HashMap<String, String>, String> {
-    let memory: HashMap<String, String> = serde_json::from_str(TRANSLATION_MEMORY)
+    let mut memory: HashMap<String, String> = serde_json::from_str(TRANSLATION_MEMORY)
         .map_err(|error| format!("翻译记忆库格式错误: {error}"))?;
+    let overlay: HashMap<String, String> = serde_json::from_str(TRANSLATION_OVERLAY)
+        .map_err(|error| format!("翻译叠加库格式错误: {error}"))?;
+    memory.extend(overlay);
     if memory.is_empty() {
         return Err("翻译记忆库为空".to_string());
     }
@@ -1589,13 +1593,26 @@ mod tests {
         let replacements: usize = stats.iter().map(|(_, stat)| stat.replaced).sum();
         let total: usize = stats.iter().map(|(_, stat)| stat.total_strings).sum();
         assert!(total > 20_000, "unexpected official resource size: {total}");
-        assert!(
-            replacements * 100 / total >= 80,
-            "official 1.34493 coverage too low: {replacements}/{total}"
+        assert_eq!(
+            replacements, total,
+            "official 1.34493 leftover: {replacements}/{total}"
         );
         let (ok, message) = compatibility_summary("1.34493.1", &stats);
         assert!(ok);
         assert!(message.contains("条"));
+        assert!(message.contains("100%"));
+    }
+
+    #[test]
+    fn overlay_extends_upstream_memory() {
+        let overlay: HashMap<String, String> = serde_json::from_str(TRANSLATION_OVERLAY).unwrap();
+        assert!(
+            overlay.len() > 3_000,
+            "overlay too small: {}",
+            overlay.len()
+        );
+        let memory = load_translation_memory().unwrap();
+        assert!(memory.len() >= 22_678 + overlay.len());
     }
 
     #[test]

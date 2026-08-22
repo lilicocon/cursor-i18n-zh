@@ -9,13 +9,17 @@ Claude Desktop translation memory
 ---------------------------------
 Source: https://github.com/GMYXDS/claude-desktop-zh-simple
 Embedded snapshot: 20260730035926, 22678 English-to-Simplified-Chinese mappings
+Workbench overlay: desktop-sample/resources/claude/translation_memory_overlay.json
+Overlay version: 20260822143000
 License: Apache License 2.0
 Source notice: desktop-sample/resources/claude/SOURCE.md
 Full license: desktop-sample/resources/claude/APACHE-2.0.txt
 
-The translation memory is embedded in the desktop executable and is used only to map
-JSON string values in three Claude Desktop en-US.json resource files. The project does
-not redistribute Claude Desktop, Claude.exe, app.asar, Anthropic assets, or account data.
+The upstream snapshot and the workbench overlay are embedded in the desktop executable
+and used only to map JSON string values in three Claude Desktop en-US.json resource
+files. The overlay covers official 1.34493.1 strings absent from the upstream snapshot
+and is not copied from GMYXDS. The project does not redistribute Claude Desktop,
+Claude.exe, app.asar, Anthropic assets, or account data.
 
 Repository community image
 --------------------------
