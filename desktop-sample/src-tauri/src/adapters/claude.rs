@@ -11,7 +11,9 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 #[cfg(target_os = "windows")]
 use std::process::Output;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+#[cfg(any(target_os = "windows", target_os = "macos"))]
+use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const ADAPTER_VERSION: &str = "0.1.1";
 const MEMORY_VERSION: &str = "20260730035926";
@@ -1505,18 +1507,14 @@ mod tests {
     #[test]
     fn reads_unpackaged_and_appx_versions_from_folder_name() {
         assert_eq!(
-            version_from_path(Path::new(
-                r"C:\Users\li\AppData\Local\AnthropicClaude\app-1.34493.1"
-            )),
+            version_from_path(Path::new("app-1.34493.1")),
             "1.34493.1"
         );
         assert_eq!(
-            version_from_path(Path::new(
-                r"C:\Program Files\WindowsApps\Claude_1.24012.9.0_x64__pzs8sxrjxfjjc"
-            )),
+            version_from_path(Path::new("Claude_1.24012.9.0_x64__pzs8sxrjxfjjc")),
             "1.24012.9.0"
         );
-        assert_eq!(version_parts("1.10.0") > version_parts("1.2.3"), true);
+        assert!(version_parts("1.10.0") > version_parts("1.2.3"));
     }
 
     #[test]
