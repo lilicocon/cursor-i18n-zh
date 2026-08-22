@@ -307,7 +307,7 @@ function browserFallbackApps() {
     },
     {
       id: "claude", name: "Claude Desktop", installed: true, ready: true, path: "浏览器预览模式",
-      version: "preview", state: "适配器可用", stateTone: "success",       adapterVersion: "0.1.2",
+      version: "preview", state: "适配器可用", stateTone: "success",       adapterVersion: "0.1.3",
       backupAvailable: true, backupPath: "浏览器预览模式\\backups\\claude\\preview\\original", backupFiles: 3,
       backupMessage: "浏览器预览样例: 3 个文件已通过完整性校验", localized: false, reason: null,
       autoCompatible: true, compatibilityMessage: "已按资源结构适配 Claude Desktop preview, 3 个 JSON 可替换条文案",

@@ -102,7 +102,7 @@ app/resources/ion-dist/i18n/en-US.json
 app/resources/ion-dist/i18n/dynamic/en-US.json
 ```
 
-- 内嵌 GMYXDS 快照 22678 条, 另有工作台叠加库覆盖官方 1.34493.1 三个 `en-US.json` 中其余条文案. 安装前统计命中并校验生成 JSON. 资源结构通过后按命中条数显示覆盖率. 远程或网页界面不在这三个 JSON 里, 不会被替换.
+- 内嵌 GMYXDS 快照 22678 条, 另有工作台叠加库覆盖官方 1.34493.1 三个 `en-US.json` 中其余条文案, 并把上游仍为英文或「您」的条目改成「你」的简体. JS 里有 ID 但不在 locale 文件中的文案写入 `ion-dist/i18n/en-US.json`. 安装前统计命中并校验生成 JSON. 远程或网页界面、以及 asar 硬编码文案不在这三个 JSON 里, 不会被替换.
 
 ### Cursor 与 Claude Code 扩展管理
 
@@ -324,7 +324,7 @@ GitHub Actions 会并行执行四种架构的构建: Windows x64、Windows ARM64
 实际内嵌或随包分发的第三方资源:
 
 - [Stack-Cairn/LiveAgent](https://github.com/Stack-Cairn/LiveAgent): LINUX DO 社区宣传图来源. 本仓库基于固定提交 `bca31978de9e23501c618f0fa4dca38d2e69f202` 保存原图到 `assets/community/linuxdo.png`, README 使用仓库内相对路径引用. 来源仓库使用 MIT License, LINUX DO 名称与标识归其权利人所有.
-- [GMYXDS/claude-desktop-zh-simple](https://github.com/GMYXDS/claude-desktop-zh-simple): Claude Desktop 简体中文翻译记忆来源. 本项目固定内嵌快照 `20260730035926`, 共 22678 条映射, 遵守 Apache-2.0. 官方 1.34493.1 其余条文案放在工作台叠加库 `desktop-sample/resources/claude/translation_memory_overlay.json` (`20260822143000`). 来源说明和完整许可证保存在 `desktop-sample/resources/claude/SOURCE.md` 与 `desktop-sample/resources/claude/APACHE-2.0.txt`.
+- [GMYXDS/claude-desktop-zh-simple](https://github.com/GMYXDS/claude-desktop-zh-simple): Claude Desktop 简体中文翻译记忆来源. 本项目固定内嵌快照 `20260730035926`, 共 22678 条映射, 遵守 Apache-2.0. 官方 1.34493.1 其余条文案放在工作台叠加库 `desktop-sample/resources/claude/translation_memory_overlay.json` (`20260822170000`), JS 缺 ID 文案在 `translation_id_overlay.json`. 来源说明和完整许可证保存在 `desktop-sample/resources/claude/SOURCE.md` 与 `desktop-sample/resources/claude/APACHE-2.0.txt`.
 - [Acorn](https://github.com/acornjs/acorn): JavaScript 语法分析运行时, MIT.
 - [OpenCC-JS](https://github.com/nk2028/opencc-js): 简繁转换运行时, MIT 与 Apache-2.0. OpenCC 字典数据遵守 Apache-2.0.
 - [Tauri](https://github.com/tauri-apps/tauri): 桌面 GUI 框架, MIT 或 Apache-2.0.

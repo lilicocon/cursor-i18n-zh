@@ -15,10 +15,12 @@ use std::process::Output;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const ADAPTER_VERSION: &str = "0.1.2";
-const MEMORY_VERSION: &str = "20260822143000";
+const ADAPTER_VERSION: &str = "0.1.3";
+const MEMORY_VERSION: &str = "20260822170000";
 const TRANSLATION_MEMORY: &str = include_str!("../../../resources/claude/translation_memory.json");
 const TRANSLATION_OVERLAY: &str = include_str!("../../../resources/claude/translation_memory_overlay.json");
+const TRANSLATION_ID_OVERLAY: &str =
+    include_str!("../../../resources/claude/translation_id_overlay.json");
 const RESOURCE_FILES: [&str; 3] = [
     "en-US.json",
     "ion-dist/i18n/en-US.json",
@@ -507,6 +509,21 @@ fn load_translation_memory() -> Result<HashMap<String, String>, String> {
     Ok(memory)
 }
 
+fn load_id_overlay() -> Result<HashMap<String, String>, String> {
+    serde_json::from_str(TRANSLATION_ID_OVERLAY)
+        .map_err(|error| format!("翻译 ID 叠加库格式错误: {error}"))
+}
+
+fn inject_message_ids(value: &mut Value, extras: &HashMap<String, String>) {
+    let Some(map) = value.as_object_mut() else {
+        return;
+    };
+    for (id, translated) in extras {
+        map.entry(id.clone())
+            .or_insert_with(|| Value::String(translated.clone()));
+    }
+}
+
 fn claude_compatibility(
     root: &Path,
     install: &ClaudeInstall,
@@ -573,12 +590,16 @@ fn prepare_translations(
     source_root: &Path,
     memory: &HashMap<String, String>,
 ) -> Result<Vec<PreparedFile>, String> {
+    let id_overlay = load_id_overlay()?;
     RESOURCE_FILES
         .iter()
         .map(|relative| {
             let mut value = read_json(&source_root.join(relative))?;
             let mut stats = TranslationStats::default();
             translate_json(&mut value, memory, &mut stats);
+            if *relative == "ion-dist/i18n/en-US.json" {
+                inject_message_ids(&mut value, &id_overlay);
+            }
             let mut text = serde_json::to_string_pretty(&value)
                 .map_err(|error| format!("生成 JSON 失败 {relative}: {error}"))?;
             text.push('\n');
@@ -716,7 +737,10 @@ fn ensure_backup(
             package_name: install.package_name.clone(),
             created_at_unix: now_unix(),
             translation_memory_version: MEMORY_VERSION.to_string(),
-            translation_memory_sha256: sha256_bytes(TRANSLATION_MEMORY.as_bytes()),
+            translation_memory_sha256: sha256_bytes(
+                format!("{TRANSLATION_MEMORY}{TRANSLATION_OVERLAY}{TRANSLATION_ID_OVERLAY}")
+                    .as_bytes(),
+            ),
             files,
         };
         write_json(&staging.join("manifest.json"), &manifest)?;
@@ -1601,6 +1625,45 @@ mod tests {
         assert!(ok);
         assert!(message.contains("条"));
         assert!(message.contains("100%"));
+
+        let ja: Value = serde_json::from_str(
+            &fs::read_to_string(resources.join("ion-dist/i18n/ja-JP.json")).unwrap(),
+        )
+        .unwrap();
+        let original = read_json(&resources.join("ion-dist/i18n/en-US.json")).unwrap();
+        let mut frontend = original.clone();
+        let mut leftover = TranslationStats::default();
+        translate_json(&mut frontend, &memory, &mut leftover);
+        let mut nin = 0usize;
+        let mut ja_left_english = 0usize;
+        if let (Value::Object(en), Value::Object(src), Value::Object(ja)) =
+            (&frontend, &original, &ja)
+        {
+            for (key, value) in en {
+                let Some(translated) = value.as_str() else {
+                    continue;
+                };
+                if translated.contains('您') {
+                    nin += 1;
+                }
+                let Some(english) = src.get(key).and_then(Value::as_str) else {
+                    continue;
+                };
+                let Some(japanese) = ja.get(key).and_then(Value::as_str) else {
+                    continue;
+                };
+                let ja_cjk = japanese.chars().any(|ch| {
+                    ('\u{4e00}'..='\u{9fff}').contains(&ch)
+                        || ('\u{3040}'..='\u{309f}').contains(&ch)
+                        || ('\u{30a0}'..='\u{30fa}').contains(&ch)
+                });
+                if ja_cjk && translated == english {
+                    ja_left_english += 1;
+                }
+            }
+        }
+        assert_eq!(nin, 0, "official JSON still has 您");
+        assert_eq!(ja_left_english, 0, "official JSON still has leftover English");
     }
 
     #[test]
@@ -1611,8 +1674,10 @@ mod tests {
             "overlay too small: {}",
             overlay.len()
         );
+        let ids: HashMap<String, String> = serde_json::from_str(TRANSLATION_ID_OVERLAY).unwrap();
+        assert!(ids.len() > 100, "id overlay too small: {}", ids.len());
         let memory = load_translation_memory().unwrap();
-        assert!(memory.len() >= 22_678 + overlay.len());
+        assert!(memory.len() > 22_678);
     }
 
     #[test]

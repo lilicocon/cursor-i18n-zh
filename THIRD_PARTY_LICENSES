@@ -10,7 +10,8 @@ Claude Desktop translation memory
 Source: https://github.com/GMYXDS/claude-desktop-zh-simple
 Embedded snapshot: 20260730035926, 22678 English-to-Simplified-Chinese mappings
 Workbench overlay: desktop-sample/resources/claude/translation_memory_overlay.json
-Overlay version: 20260822143000
+ID overlay: desktop-sample/resources/claude/translation_id_overlay.json
+Overlay version: 20260822170000
 License: Apache License 2.0
 Source notice: desktop-sample/resources/claude/SOURCE.md
 Full license: desktop-sample/resources/claude/APACHE-2.0.txt
