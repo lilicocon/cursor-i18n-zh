@@ -606,7 +606,10 @@ test('Cursor macOS compatibility workflow bounds and cleans silent installer exe
   assert.doesNotMatch(cursorCompatMacosWorkflow, /Start-Process -FilePath \$installer[^\n]+-Wait/);
   assert.match(cursorCompatMacosWorkflow, /ditto "\$mount\/Cursor\.app" "\$app"/);
   assert.match(cursorCompatMacosWorkflow, /codesign --verify --deep --strict/);
-  assert.match(cursorCompatMacosWorkflow, /Authority=\.\+\(Anysphere\|Cursor\)/);
+  assert.match(
+    cursorCompatMacosWorkflow,
+    /TeamIdentifier=VDXQ22DGB9\|Authority=\.\+\(Anysphere\|Cursor\|Hilary Stout\)/
+  );
   assert.match(cursorCompatMacosWorkflow, /Detected installed Cursor identity/);
   assert.match(cursorCompatMacosWorkflow, /tail -n 160 "\$installer_log"/);
   assert.match(cursorCompatMacosWorkflow, /SECONDS \+ 12 \* 60/);

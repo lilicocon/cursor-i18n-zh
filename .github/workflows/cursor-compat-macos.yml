@@ -140,12 +140,19 @@ jobs:
           hdiutil detach "$mount" -quiet || hdiutil detach "$mount" -force -quiet || true
 
           codesign --verify --deep --strict "$app"
+          # Official Cursor macOS builds are packaged via ToDesktop and signed as
+          # Developer ID Application: Hilary Stout (VDXQ22DGB9). Keep Anysphere/
+          # Cursor matches in case the leaf identity migrates later.
           signer="$(codesign -dv --verbose=4 "$app" 2>&1 | tee -a "$installer_log")"
-          if ! grep -Eq 'Authority=.+(Anysphere|Cursor)' <<<"$signer"; then
+          if ! grep -Eq 'TeamIdentifier=VDXQ22DGB9|Authority=.+(Anysphere|Cursor|Hilary Stout)' <<<"$signer"; then
             echo "Unexpected Cursor.app signer" | tee -a "$installer_log"
+            echo "$signer" | tee -a "$installer_log"
             exit 1
           fi
-          subject="$(grep -E 'Authority=.+(Anysphere|Cursor)' <<<"$signer" | head -n 1)"
+          subject="$(grep -E 'Authority=.+(Anysphere|Cursor|Hilary Stout)' <<<"$signer" | head -n 1 || true)"
+          if [[ -z "$subject" ]]; then
+            subject="$(grep -E 'TeamIdentifier=VDXQ22DGB9' <<<"$signer" | head -n 1 || true)"
+          fi
 
           pkill -x Cursor 2>/dev/null || true
           deadline=$((SECONDS + 12 * 60))
