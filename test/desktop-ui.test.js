@@ -459,6 +459,9 @@ test('desktop UI gates first launch before local or network initialization', () 
   assert.match(readme, /Cursor 3\.16/);
   assert.doesNotMatch(readme, /3\.11\.19/);
   assert.doesNotMatch(desktopReadme, /Universal 双架构/);
+  assert.doesNotMatch(desktopReadme, /同意结果只保存在当前 WebView 的本地存储中/);
+  assert.doesNotMatch(desktopReadme, /Claude Desktop 的恢复操作必须使用管理员权限/);
+  assert.match(desktopReadme, /工作台数据目录/);
   assert.match(script, /get\("preview"\)/);
   assert.match(script, /\["about", "extensions"\]\.includes\(requestedBrowserPreview\)/);
   assert.ok(
