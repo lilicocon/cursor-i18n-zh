@@ -66,6 +66,10 @@ const sessions = fs.readFileSync(
   path.join(root, 'desktop-sample', 'src-tauri', 'src', 'sessions.rs'),
   'utf8',
 );
+const claudeAdapter = fs.readFileSync(
+  path.join(root, 'desktop-sample', 'src-tauri', 'src', 'adapters', 'claude.rs'),
+  'utf8',
+);
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 const desktopReadme = fs.readFileSync(path.join(root, 'desktop-sample', 'README.md'), 'utf8');
 const securityCheck = fs.readFileSync(path.join(root, 'scripts', 'security-check.js'), 'utf8');
@@ -107,7 +111,10 @@ test('desktop UI exposes usage and backup history controls', () => {
   assert.match(script, /"cursor_usage"/);
   assert.match(script, /"claude_usage"/);
   assert.match(script, /data-usage-product/);
-  assert.match(html, /data-usage-product="claude"/);
+  assert.match(html, /Chat \/ Code 网页不会变中文/);
+  assert.match(script, /claude\.ai 网页/);
+  assert.match(claudeAdapter, /live_translation_hits/);
+  assert.match(claudeAdapter, /汉化已被覆盖/);
   assert.match(script, /invoke\("cursor_sessions"\)/);
   assert.match(script, /invoke\("manage_cursor_session"/);
   assert.match(script, /confirm: action !== "refresh"/);
@@ -458,6 +465,8 @@ test('desktop UI gates first launch before local or network initialization', () 
   assert.match(sessions, /QUIT_FORCE_ATTEMPTS: u32 = 4/);
   assert.match(readme, /Cursor 3\.16/);
   assert.doesNotMatch(readme, /3\.11\.19/);
+  assert.match(readme, /claude\.ai/);
+  assert.match(desktopReadme, /claude\.ai/);
   assert.doesNotMatch(desktopReadme, /Universal 双架构/);
   assert.match(script, /get\("preview"\)/);
   assert.match(script, /\["about", "extensions"\]\.includes\(requestedBrowserPreview\)/);
