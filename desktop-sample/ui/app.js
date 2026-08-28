@@ -3496,7 +3496,7 @@ async function runAction(action) {
   } catch (error) {
     const message = normalizeError(error);
     $("#operationMessage").textContent = message;
-    if (message.includes("管理员身份重新启动汉化工作台")) {
+    if (message.includes("管理员身份重新启动译台") || message.includes("管理员身份重新启动汉化工作台")) {
       $("#adminNote").classList.remove("hidden");
       $("#adminNoteTitle").textContent = "需要授权才能结束 Cursor";
       $("#adminNoteText").textContent = "Cursor 进程树已自动清理, 仍有受保护进程. 请重新打开并授权后再执行操作.";

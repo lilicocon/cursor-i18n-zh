@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>汉化工作台</h1>
+  <h1>译台</h1>
   <p><strong>为 Cursor 和 Claude Desktop 提供安全, 可恢复, 可持续维护的中文本地化体验</strong></p>
   <p>版本识别 · 强制备份 · 一键汉化 · 原版恢复 · 用量监控 · 会话管理 · MCP/Skill/提示词管理 · 扩展市场 · Windows/macOS</p>
 
@@ -45,7 +45,7 @@
 
 <p align="center">
   <a href="assets/screenshots/workbench-software-center.png">
-    <img src="assets/screenshots/workbench-software-center.png" alt="汉化工作台软件中心" width="92%">
+    <img src="assets/screenshots/workbench-software-center.png" alt="译台软件中心" width="92%">
   </a>
 </p>
 <p align="center"><strong>软件中心</strong><br><sub>自动识别 Cursor 和 Claude Desktop, 展示版本, 运行环境, 适配状态和备份状态.</sub></p>
@@ -161,13 +161,13 @@ macOS x86（Intel）:            localization-workbench-v0.4.10-macos-x64.dmg
 
 桌面界面在 Windows 和 macOS 上都使用 macOS 交互习惯: 左侧红绿灯, 双击标题栏缩放, ⌘W / Ctrl+W 关闭面板. 文件对话框仍使用系统原生窗口.
 
-Windows 推荐解压完整 ZIP 后运行其中的工作台, 不要只拷贝 EXE. macOS 推荐打开 DMG, 把「汉化工作台」拖到「应用程序」.
+Windows 推荐解压完整 ZIP 后运行其中的工作台, 不要只拷贝 EXE. macOS 推荐打开 DMG, 把「译台」拖到「应用程序」.
 
 使用步骤:
 
 1. 下载并打开与本机架构匹配的安装包.
 2. 如果要汉化 Cursor, 先安装 Node.js 18 或更高版本.
-3. 启动「汉化工作台」, 阅读并同意首次启动声明与隐私说明.
+3. 启动「译台」, 阅读并同意首次启动声明与隐私说明.
 4. 打开“备份”页, 为目标应用创建并校验当前版本原始备份.
 5. 打开“软件中心”, 选择目标语言并安装汉化.
 6. 重新启动目标应用.
