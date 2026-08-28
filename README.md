@@ -103,7 +103,8 @@ app/resources/ion-dist/i18n/en-US.json
 app/resources/ion-dist/i18n/dynamic/en-US.json
 ```
 
-- 内嵌 GMYXDS 快照 22678 条, 另有工作台叠加库覆盖官方 1.34493.1 三个 `en-US.json` 中其余条文案, 并把上游仍为英文或「您」的条目改成「你」的简体. JS 里有 ID 但不在 locale 文件中的文案写入 `ion-dist/i18n/en-US.json`. 安装前统计命中并校验生成 JSON. 远程或网页界面、以及 asar 硬编码文案不在这三个 JSON 里, 不会被替换.
+- 内嵌 GMYXDS 快照 22678 条, 另有工作台叠加库覆盖官方 1.34493.1 三个 `en-US.json` 中其余条文案, 并把上游仍为英文或「您」的条目改成「你」的简体. JS 里有 ID 但不在 locale 文件中的文案写入 `ion-dist/i18n/en-US.json`. 安装前统计命中并校验生成 JSON.
+- 官方桌面客户端的 Chat / Code / Cowork 主界面是嵌进去的 `claude.ai` 网页, 终端 CLI 也不读这三个 JSON, 都不会被替换. 标题栏、托盘和关于窗口才走本地资源.
 
 ### Cursor 与 Claude Code 扩展管理
 

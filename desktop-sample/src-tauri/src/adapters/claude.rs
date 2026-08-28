@@ -102,13 +102,18 @@ pub fn detect() -> AppStatus {
                 }
             };
             let state = read_state(&root, &install).unwrap_or_default();
-            let localized = state.current_state == "patched";
+            let live_hits = load_translation_memory()
+                .ok()
+                .and_then(|memory| live_translation_hits(&install.resources, &memory).ok())
+                .unwrap_or(0);
+            let localized = live_hits > 0;
+            let overwritten = !localized && state.current_state == "patched";
             let (auto_compatible, compatibility_message) =
-                claude_compatibility(&root, &install, localized);
+                claude_compatibility(&root, &install, localized, overwritten);
             AppStatus {
                 id: "claude",
                 name: "Claude Desktop",
-                description: "轻量 JSON 资源汉化",
+                description: "只改本地 3 个 JSON, Chat/Code 网页不在范围内",
                 installed: true,
                 ready: auto_compatible || localized,
                 path: Some(install.resources.to_string_lossy().into_owned()),
@@ -116,12 +121,16 @@ pub fn detect() -> AppStatus {
                 version: Some(install.version.clone()),
                 state: if localized {
                     "已汉化".to_string()
+                } else if overwritten {
+                    "汉化已被覆盖".to_string()
                 } else if auto_compatible {
                     "适配器可用".to_string()
                 } else {
                     "结构待适配".to_string()
                 },
-                state_tone: if auto_compatible || localized {
+                state_tone: if overwritten {
+                    "warning"
+                } else if auto_compatible || localized {
                     "success"
                 } else {
                     "warning"
@@ -147,7 +156,7 @@ pub fn detect() -> AppStatus {
             AppStatus {
                 id: "claude",
                 name: "Claude Desktop",
-                description: "轻量 JSON 资源汉化",
+                description: "只改本地 3 个 JSON, Chat/Code 网页不在范围内",
                 installed,
                 ready: false,
                 path: None,
@@ -337,12 +346,18 @@ fn install_patch(
             updated_at_unix: now_unix(),
         },
     )?;
-    sink.emit(100, "DONE", "Claude Desktop 汉化完成, 重新打开后生效.");
+    sink.emit(
+        100,
+        "DONE",
+        "本地 3 个 JSON 已写入. 彻底退出含托盘后再开, 看标题栏和托盘; Chat / Code 仍是 claude.ai 网页.",
+    );
     Ok(OperationResult {
         app_id: "claude".to_string(),
         action: request.action.clone(),
-        title: "Claude Desktop 汉化完成".to_string(),
-        message: format!("仅修改 3 个 en-US.json, 共替换 {replacements} 条文本."),
+        title: "Claude Desktop 本地 JSON 已汉化".to_string(),
+        message: format!(
+            "仅修改 3 个 en-US.json, 共替换 {replacements} 条. Chat / Code / Cowork 主界面来自 claude.ai, 本地文件改不到; 终端 CLI 也不在范围内."
+        ),
         files_changed: RESOURCE_FILES.len(),
         replacements,
         backup_path: Some(backup.to_string_lossy().into_owned()),
@@ -528,19 +543,35 @@ fn claude_compatibility(
     root: &Path,
     install: &ClaudeInstall,
     localized: bool,
+    overwritten: bool,
 ) -> (bool, String) {
+    if overwritten {
+        return (
+            true,
+            format!(
+                "Claude Desktop {} 的 3 个 JSON 已回到英文, 多半是应用更新覆盖了汉化. 请重新备份再安装. Chat / Code 主界面来自 claude.ai, 本来就不在这三个文件里",
+                install.version
+            ),
+        );
+    }
     if localized {
         return (
             true,
             format!(
-                "已按资源结构适配 Claude Desktop {}, 当前 3 个 JSON 已汉化",
+                "已按资源结构适配 Claude Desktop {}, 当前 3 个 JSON 已汉化. Chat / Code 主界面来自 claude.ai 网页, 本地 JSON 改不到",
                 install.version
             ),
         );
     }
     let source = source_root(root, install).unwrap_or_else(|_| install.resources.clone());
     match load_translation_memory().and_then(|memory| preview_resources(&source, &memory)) {
-        Ok(stats) => compatibility_summary(&install.version, &stats),
+        Ok(stats) => {
+            let (ok, message) = compatibility_summary(&install.version, &stats);
+            (
+                ok,
+                format!("{message}. Chat / Code 主界面来自 claude.ai, 不在这三个 JSON 里"),
+            )
+        }
         Err(error) => (
             false,
             format!(
@@ -664,6 +695,21 @@ fn contains_cjk(value: &str) -> bool {
         .any(|ch| matches!(ch, '\u{3400}'..='\u{9fff}' | '\u{f900}'..='\u{faff}'))
 }
 
+fn live_translation_hits(
+    resources: &Path,
+    memory: &HashMap<String, String>,
+) -> Result<usize, String> {
+    let known_translations = memory
+        .values()
+        .filter(|value| contains_cjk(value))
+        .map(String::as_str)
+        .collect::<HashSet<_>>();
+    RESOURCE_FILES.iter().try_fold(0usize, |total, relative| {
+        let value = read_json(&resources.join(relative))?;
+        Ok(total + count_known_translations(&value, &known_translations))
+    })
+}
+
 fn ensure_backup(
     root: &Path,
     install: &ClaudeInstall,
@@ -676,15 +722,7 @@ fn ensure_backup(
     }
 
     assert_resource_files(&install.resources)?;
-    let known_translations = memory
-        .values()
-        .filter(|value| contains_cjk(value))
-        .map(String::as_str)
-        .collect::<HashSet<_>>();
-    let localized_values = RESOURCE_FILES.iter().try_fold(0usize, |total, relative| {
-        let value = read_json(&install.resources.join(relative))?;
-        Ok::<_, String>(total + count_known_translations(&value, &known_translations))
-    })?;
+    let localized_values = live_translation_hits(&install.resources, memory)?;
     if localized_values > 0 {
         return Err(format!(
             "当前 Claude 资源已包含 {localized_values} 个已知中文译文, 已拒绝将其保存为原始备份"
@@ -1720,6 +1758,20 @@ mod tests {
         assert_eq!(value["Copy"], "复制");
         assert_eq!(value["items"][0], "编辑");
         assert_eq!(stats.replaced, 2);
+    }
+
+    #[test]
+    fn live_translation_hits_use_resource_files_not_state() {
+        let root = sandbox();
+        write_resources(&root);
+        let memory = HashMap::from([
+            ("Copy".to_string(), "复制".to_string()),
+            ("Edit".to_string(), "编辑".to_string()),
+        ]);
+        assert_eq!(live_translation_hits(&root, &memory).unwrap(), 0);
+        fs::write(root.join("en-US.json"), r#"{"title":"复制","nested":["Edit",42]}"#).unwrap();
+        assert_eq!(live_translation_hits(&root, &memory).unwrap(), 1);
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]

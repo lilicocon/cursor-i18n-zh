@@ -311,7 +311,7 @@ function browserFallbackApps() {
       version: "preview", state: "适配器可用", stateTone: "success",       adapterVersion: "0.1.3",
       backupAvailable: true, backupPath: "浏览器预览模式\\backups\\claude\\preview\\original", backupFiles: 3,
       backupMessage: "浏览器预览样例: 3 个文件已通过完整性校验", localized: false, reason: null,
-      autoCompatible: true, compatibilityMessage: "已按资源结构适配 Claude Desktop preview, 3 个 JSON 可替换条文案",
+      autoCompatible: true, compatibilityMessage: "已按资源结构适配 Claude Desktop preview, 3 个 JSON 可替换条文案. Chat / Code 主界面来自 claude.ai, 不在这三个 JSON 里",
       locales: [{ id: "zh-cn", label: "简体中文", tag: "zh-CN" }],
     },
   ];
@@ -3307,7 +3307,7 @@ function openModal(appId) {
   $("#modalLogo").className = `app-logo ${appId === "claude" ? "claude-logo" : "cursor-logo"}`;
   applyAppLogoElement($("#modalLogo"), appId, app.iconDataUrl);
   $("#safetyText").innerHTML = appId === "claude"
-    ? "<strong>自动兼容资源模式</strong><br>自动定位最新版本并校验 3 个 en-US.json, 不修改 app.asar 或客户端配置. macOS 修改后会执行本机 ad-hoc 重签名."
+    ? "<strong>自动兼容资源模式</strong><br>只改 3 个 en-US.json, 不修改 app.asar. Chat / Code / Cowork 主界面是嵌进去的 claude.ai 网页, 终端 CLI 也不在范围内, 都不会变中文. 请看标题栏、托盘和关于窗口. macOS 修改后会执行本机 ad-hoc 重签名."
     : "<strong>自动兼容引擎模式</strong><br>按资源结构发现新入口包, 安装前执行严格语法预检, 版本备份和事务化恢复.";
   updateModalBackupGate(app);
   renderLocales(app);

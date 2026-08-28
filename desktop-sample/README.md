@@ -37,6 +37,8 @@ ion-dist/i18n/en-US.json
 ion-dist/i18n/dynamic/en-US.json
 ```
 
+官方 Claude Code 桌面客户端的 Chat / Code / Cowork 主界面来自 `claude.ai` 网页, 不在这三个文件里. 终端 CLI 也不在范围内.
+
 禁止修改:
 
 - `app.asar`.
